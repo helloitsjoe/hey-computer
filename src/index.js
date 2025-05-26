@@ -91,7 +91,7 @@ async function run(recorder) {
         process.stdout.write(`${finalTranscript}\n`);
 
         const items = preprocessAnylist(transcript);
-        addToList(items);
+        await addToList(items);
 
         isAwake = false;
         transcript = '';
