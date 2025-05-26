@@ -11,32 +11,38 @@ const modelPath = path.join(process.cwd(), 'models');
 const PORCUPINE_MODEL_PATH = path.join(modelPath, 'porcupine_params.pv');
 const CHEETAH_MODEL_PATH = path.join(modelPath, 'cheetah_params.pv');
 const ACCESS_KEY = process.env.ACCESS_KEY;
-const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX || 1;
+const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX;
 
 let isAwake = false;
 
-function showDevices() {
+function getDeviceIndex() {
+  const preferredDevices = {
+    'MacBook Air Microphone': true,
+    'Yeti X Analog Stereo': true,
+  };
+
   const devices = PvRecorder.getAvailableDevices();
+
   for (let i = 0; i < devices.length; i++) {
     console.log(`index: ${i}, device name: ${devices[i]}`);
+    if (devices[i] in preferredDevices) {
+      return i;
+    }
   }
+
+  return Number(AUDIO_DEVICE_INDEX) || 0;
 }
 
 /**
  * Listens for the wake word using Porcupine and then starts
  */
-async function listenForWake() {
-  showDevices();
+async function listenForWake(cb) {
+  const deviceIndex = getDeviceIndex();
 
-  const porcupine = new Porcupine(
-    ACCESS_KEY,
-    [BuiltinKeyword.COMPUTER],
-    [0.5], // sensitivity
-    PORCUPINE_MODEL_PATH,
-    // TODO: libraryFilePath, // path to the Porcupine library file if needed
-  );
+  const porcupine = getPorcupine();
+  const cheetah = getCheetah();
 
-  const recorder = new PvRecorder(porcupine.frameLength, AUDIO_DEVICE_INDEX);
+  const recorder = new PvRecorder(porcupine.frameLength, deviceIndex);
   recorder.start();
 
   console.log(`Listening for wake word on: ${recorder.getSelectedDevice()}...`);
@@ -48,7 +54,7 @@ async function listenForWake() {
       if (keywordIndex >= 0) {
         console.log('Wake word detected!');
         isAwake = true;
-        await run(recorder);
+        await cb(recorder, cheetah);
       }
     } catch (err) {
       console.error(err);
@@ -57,6 +63,7 @@ async function listenForWake() {
 
   recorder.stop();
   recorder.release();
+  cheetah.release();
   process.exit();
 }
 
@@ -65,13 +72,7 @@ async function listenForWake() {
  *
  * @param {PvRecorder} recorder - The recorder instance to use for audio input.
  */
-async function run(recorder) {
-  const cheetah = new Cheetah(ACCESS_KEY, {
-    modelPath: CHEETAH_MODEL_PATH,
-    // endpointDurationSec: 3, // Default is 1 second
-    // enableAutomaticPunctuation: !disableAutomaticPunctuation,
-  });
-
+async function listenForSpeech(recorder, cheetah) {
   console.log(`Listening for speech on: ${recorder.getSelectedDevice()}...`);
 
   let transcript = '';
@@ -105,11 +106,40 @@ async function run(recorder) {
   }
 
   console.log('Going back to sleep...');
+}
 
-  cheetah.release();
+let _porcupine = null;
+let _cheetah = null;
+
+function getPorcupine() {
+  if (!_porcupine) {
+    console.log('Initializing Porcupine...');
+    _porcupine = new Porcupine(
+      ACCESS_KEY,
+      [BuiltinKeyword.COMPUTER],
+      [0.5], // sensitivity
+      PORCUPINE_MODEL_PATH,
+      // TODO: libraryFilePath, // path to the Porcupine library file if needed
+    );
+  }
+
+  return _porcupine;
+}
+
+function getCheetah() {
+  if (!_cheetah) {
+    console.log('Initializing Cheetah...');
+    _cheetah = new Cheetah(ACCESS_KEY, {
+      modelPath: CHEETAH_MODEL_PATH,
+      // endpointDurationSec: 3, // Default is 1 second
+      // enableAutomaticPunctuation: !disableAutomaticPunctuation,
+    });
+  }
+
+  return _cheetah;
 }
 
 module.exports = {
   listenForWake,
-  run,
+  listenForSpeech,
 };

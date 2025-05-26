@@ -9,9 +9,12 @@ if (!EMAIL || !PASSWORD) {
   process.exit(1);
 }
 
+const titleCase = (name) =>
+  name.replace(/\b(\w)/g, (match) => match.toUpperCase());
+
 function preprocessAnylist(transcript) {
   // Match items in the transcript e.g. "add milk to the grocery list"
-  const regex = /(?:add|had)?\s+(.+?)\s+to\s+(?:the|my)\s+grocery list/i;
+  const regex = /(.+?)\s+to\s+(?:the|my)\s+grocery list/i;
   const match = transcript.match(regex);
   console.log('Transcript:', transcript);
   console.log('Match:', match);
@@ -19,9 +22,6 @@ function preprocessAnylist(transcript) {
     return match[1].trim(); // Return the item(s) to be added
   }
 }
-
-const titleCase = (name) =>
-  name.replace(/\b(\w)/g, (match) => match.toUpperCase());
 
 async function addToList(itemsRaw) {
   console.log(itemsRaw);

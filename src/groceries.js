@@ -3,6 +3,8 @@ function smartSplit(str) {
   // with a placeholder to protect them from the split.
   const macAndCheese = '##MAC_AND_CHEESE##';
   const protectedStr = str
+    // Strip off "add", "had", or "at" at the start of the string
+    .replace(/^(add|had|at|and)\s+/i, '')
     .replace(/mac and cheese/gi, macAndCheese)
     .replace(/macaroni and cheese/gi, macAndCheese);
 
