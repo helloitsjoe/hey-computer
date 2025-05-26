@@ -8,35 +8,32 @@ const { PvRecorder } = require('@picovoice/pvrecorder-node');
 const MODEL_PATH = path.join(process.cwd(), 'models', 'cheetah_params.pv');
 const ACCESS_KEY = process.env.ACCESS_KEY;
 
-if (process.env.SHOW_AUDIO_DEVICES === 'true') {
-  const devices = PvRecorder.getAvailableDevices();
-  for (let i = 0; i < devices.length; i++) {
-    console.log(`index: ${i}, device name: ${devices[i]}`);
-  }
-  process.exit();
+// if (process.env.SHOW_AUDIO_DEVICES === 'true') {
+const devices = PvRecorder.getAvailableDevices();
+for (let i = 0; i < devices.length; i++) {
+  console.log(`index: ${i}, device name: ${devices[i]}`);
 }
+// }
 
-let isInterrupted = false;
+let isDone = false;
 
 async function run() {
   const cheetah = new Cheetah(ACCESS_KEY, {
     modelPath: MODEL_PATH,
-    // libraryPath: libraryFilePath,
     endpointDurationSec: 3,
+    // libraryPath: libraryFilePath, // TODO: Is this needed? https://github.com/Picovoice/cheetah/tree/master/lib
     // enableAutomaticPunctuation: !disableAutomaticPunctuation,
   });
 
   const recorder = new PvRecorder(
     cheetah.frameLength,
-    process.env.AUDIO_DEVICE_INDEX || 0,
+    process.env.AUDIO_DEVICE_INDEX || 1,
   );
   recorder.start();
 
-  console.log(`Using device: ${recorder.getSelectedDevice()}`);
+  console.log(`Listening on: ${recorder.getSelectedDevice()}...`);
 
-  console.log('Listening...');
-
-  while (!isInterrupted) {
+  while (!isDone) {
     const pcm = await recorder.read();
     try {
       const [partialTranscript, isEndpoint] = cheetah.process(pcm);
@@ -44,18 +41,22 @@ async function run() {
       if (isEndpoint === true) {
         const finalTranscript = cheetah.flush();
         process.stdout.write(`${finalTranscript}\n`);
+        isDone = true;
       }
     } catch (err) {
       if (err instanceof CheetahActivationLimitReachedError) {
-        console.error(
-          `AccessKey '${ACCESS_KEY}' has reached it's processing limit.`,
-        );
+        console.error(`AccessKey '${ACCESS_KEY}' reached processing limit.`);
       } else {
         console.error(err);
       }
-      isInterrupted = true;
+      isDone = true;
     }
   }
+
+  recorder.stop();
+  recorder.release();
+  cheetah.release();
+  process.exit();
 }
 
 run();
