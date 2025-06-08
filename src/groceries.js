@@ -13,7 +13,7 @@ function smartSplit(str) {
 
   // Restore the original phrases
   return parts.map((part) =>
-    part.replace(new RegExp(macAndCheese, 'g'), 'macaroni and cheese'),
+    part.replace(new RegExp(macAndCheese, 'g'), 'mac and cheese'),
   );
 }
 

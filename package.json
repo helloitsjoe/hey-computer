@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
+    "anylist": "node --env-file=.env src/anylist-debug.js",
     "dev": "nodemon --env-file=.env src/index.js"
   },
   "repository": {
@@ -25,7 +26,8 @@
     "globals": "^16.2.0",
     "nodemon": "^3.1.10",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.2"
   },
   "dependencies": {
     "@picovoice/cheetah-node": "^2.1.3",
