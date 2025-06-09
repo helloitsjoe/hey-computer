@@ -12,6 +12,7 @@ const PORCUPINE_MODEL_PATH = path.join(modelPath, 'porcupine_params.pv');
 const CHEETAH_MODEL_PATH = path.join(modelPath, 'cheetah_params.pv');
 const ACCESS_KEY = process.env.ACCESS_KEY;
 const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX;
+const SKIP_PORCUPINE = process.env.SKIP_PORCUPINE;
 
 let isAwake = false;
 
@@ -42,7 +43,9 @@ async function listenForWake(cb) {
   const porcupine = getPorcupine();
   const cheetah = getCheetah();
 
-  const recorder = new PvRecorder(porcupine.frameLength, deviceIndex);
+  const frameLength = cheetah.frameLength || porcupine.frameLength;
+
+  const recorder = new PvRecorder(frameLength, deviceIndex);
   recorder.start();
 
   console.log(`Listening for wake word on: ${recorder.getSelectedDevice()}...`);
@@ -112,6 +115,13 @@ let _porcupine = null;
 let _cheetah = null;
 
 function getPorcupine() {
+  if (SKIP_PORCUPINE) {
+    console.log('Skipping Porcupine wake word detection.');
+    return {
+      // Mock Porcupine for testing or skipping
+      process: () => 1,
+    };
+  }
   if (!_porcupine) {
     console.log('Initializing Porcupine...');
     _porcupine = new Porcupine(
