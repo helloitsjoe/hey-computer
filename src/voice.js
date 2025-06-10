@@ -2,7 +2,7 @@ const path = require('path');
 const { Cheetah, CheetahErrors } = require('@picovoice/cheetah-node');
 const { PvRecorder } = require('@picovoice/pvrecorder-node');
 const { Porcupine, BuiltinKeyword } = require('@picovoice/porcupine-node');
-const { preprocessAnylist, addToList } = require('./anylist');
+const { executeCommand } = require('./commands');
 
 const { CheetahActivationLimitReachedError } = CheetahErrors;
 
@@ -91,8 +91,10 @@ async function listenForSpeech(recorder, cheetah) {
         transcript += finalTranscript;
         process.stdout.write(`${finalTranscript}\n`);
 
-        const items = preprocessAnylist(transcript);
-        await addToList(items);
+        console.log('Processing command:', transcript);
+        const result = await executeCommand(transcript);
+        console.log('Command executed successfully.');
+        console.log('Result:', result);
 
         isAwake = false;
         transcript = '';
