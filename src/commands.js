@@ -1,0 +1,37 @@
+const { ANYLIST_REGEX, preprocessAnylist, addToList } = require('./anylist');
+const { MBTA_REGEX, getNextBus } = require('./mbta');
+const { CLOCK_REGEX, parseClock, handleClockCommand } = require('./clock');
+const {
+  WEATHER_REGEX,
+  parseWeather,
+  handleWeatherCommand,
+} = require('./weather');
+
+async function executeCommand(rawTranscript) {
+  const transcript = rawTranscript.trim();
+  if (!transcript || typeof transcript !== 'string') {
+    throw new Error('Invalid transcript provided.');
+  }
+
+  switch (true) {
+    case ANYLIST_REGEX.test(transcript): {
+      const { items, list } = preprocessAnylist(transcript);
+      return await addToList(items, list);
+    }
+    case MBTA_REGEX.test(transcript): {
+      return getNextBus(transcript);
+    }
+    case CLOCK_REGEX.test(transcript): {
+      const { type, action, time } = parseClock(transcript);
+      return await handleClockCommand({ type, action, time });
+    }
+    case WEATHER_REGEX.test(transcript): {
+      const { period, location } = parseWeather(transcript);
+      return await handleWeatherCommand({ period, location });
+    }
+    default:
+      return `You said: "${transcript}". I don't know what you want me to do.`;
+  }
+}
+
+module.exports = { executeCommand };
