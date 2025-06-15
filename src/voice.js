@@ -12,7 +12,7 @@ const PORCUPINE_MODEL_PATH = path.join(modelPath, 'porcupine_params.pv');
 const CHEETAH_MODEL_PATH = path.join(modelPath, 'cheetah_params.pv');
 const ACCESS_KEY = process.env.ACCESS_KEY;
 const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX;
-const SKIP_PORCUPINE = process.env.SKIP_PORCUPINE;
+const SKIP_WAKE = process.env.SKIP_WAKE === 'true';
 
 let isAwake = false;
 
@@ -37,7 +37,7 @@ function getDeviceIndex() {
 /**
  * Listens for the wake word using Porcupine and then starts
  */
-async function listenForWake(cb) {
+async function init(cb) {
   const deviceIndex = getDeviceIndex();
 
   const porcupine = getPorcupine();
@@ -57,7 +57,7 @@ async function listenForWake(cb) {
       if (keywordIndex >= 0) {
         console.log('Wake word detected!');
         isAwake = true;
-        await cb(recorder, cheetah);
+        return cb(recorder, cheetah);
       }
     } catch (err) {
       console.error(err);
@@ -98,6 +98,8 @@ async function listenForSpeech(recorder, cheetah) {
 
         isAwake = false;
         transcript = '';
+
+        return result;
       }
     } catch (err) {
       if (err instanceof CheetahActivationLimitReachedError) {
@@ -117,7 +119,7 @@ let _porcupine = null;
 let _cheetah = null;
 
 function getPorcupine() {
-  if (SKIP_PORCUPINE) {
+  if (SKIP_WAKE) {
     console.log('Skipping Porcupine wake word detection.');
     return {
       // Mock Porcupine for testing or skipping
@@ -152,6 +154,6 @@ function getCheetah() {
 }
 
 module.exports = {
-  listenForWake,
+  init,
   listenForSpeech,
 };

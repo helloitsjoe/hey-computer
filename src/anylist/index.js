@@ -116,9 +116,16 @@ async function addToList(items, list = 'Grocery List') {
   const uncheckPromises = existingItems.map(uncheckItem);
   const newPromises = newItems.map((item) => addItem(item, groceries));
 
-  await Promise.all([...uncheckPromises, ...newPromises]);
-
-  any.teardown();
+  try {
+    const results = await Promise.all([...uncheckPromises, ...newPromises]);
+    console.log('Processed items:', results);
+    return items.join(', ');
+  } catch (err) {
+    console.error('Error processing items:', err);
+    return err;
+  } finally {
+    any.teardown();
+  }
 }
 
 module.exports = {
