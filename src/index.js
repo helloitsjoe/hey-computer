@@ -16,6 +16,10 @@ async function main() {
     });
 
     const server = http.createServer(async (req, res) => {
+      // Handle CORS from browser from localhost:3211
+      res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3211');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
+
       if (req.url === '/voice') {
         const speechResponse = await listenForSpeech(recorder, cheetah);
         res.writeHead(200, { 'Content-Type': 'text/plain' });
