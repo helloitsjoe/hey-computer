@@ -10,7 +10,8 @@ const {
 async function executeCommand(rawTranscript) {
   const transcript = rawTranscript.trim();
   if (!transcript || typeof transcript !== 'string') {
-    throw new Error('Invalid transcript provided.');
+    console.error('Invalid transcript provided:', transcript);
+    return { message: 'Invalid transcript' };
   }
 
   switch (true) {
@@ -30,7 +31,9 @@ async function executeCommand(rawTranscript) {
       return await handleWeatherCommand({ period, location });
     }
     default:
-      return `You said: "${transcript}". I don't know what you want me to do.`;
+      return {
+        message: `You said: "${transcript}". I don't know what you want me to do.`,
+      };
   }
 }
 

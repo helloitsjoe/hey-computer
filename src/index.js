@@ -22,8 +22,8 @@ async function main() {
 
       if (req.url === '/voice') {
         const speechResponse = await listenForSpeech(recorder, cheetah);
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end(speechResponse);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(speechResponse));
       } else {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('Not Found');

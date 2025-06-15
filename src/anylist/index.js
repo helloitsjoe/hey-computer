@@ -119,10 +119,11 @@ async function addToList(items, list = 'Grocery List') {
   try {
     const results = await Promise.all([...uncheckPromises, ...newPromises]);
     console.log('Processed items:', results);
-    return items.join(', ');
+    // TODO: Move this format (obj with 'message' key) to caller
+    return { message: `Added ${items.join(', ')} to ${list}` };
   } catch (err) {
     console.error('Error processing items:', err);
-    return err;
+    return { message: err.message };
   } finally {
     any.teardown();
   }

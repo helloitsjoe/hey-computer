@@ -79,11 +79,20 @@ async function listenForSpeech(recorder, cheetah) {
   console.log(`Listening for speech on: ${recorder.getSelectedDevice()}...`);
 
   let transcript = '';
+  const start = Date.now();
+  // Timeout in case mic stays open
+  const LISTENING_TIMEOUT_MS = 15 * 1000;
 
   while (isAwake) {
     const pcm = await recorder.read();
     try {
       const [partialTranscript, isEndpoint] = cheetah.process(pcm);
+      if (Date.now() - start >= LISTENING_TIMEOUT_MS) {
+        const partialTranscript = transcript;
+        transcript = '';
+        return { message: `Timed out. Transcript: ${partialTranscript}` };
+      }
+
       transcript += partialTranscript;
       process.stdout.write(partialTranscript);
       if (isEndpoint === true) {
@@ -96,8 +105,12 @@ async function listenForSpeech(recorder, cheetah) {
         console.log('Command executed successfully.');
         console.log('Result:', result);
 
-        isAwake = false;
+        if (!SKIP_WAKE) {
+          isAwake = false;
+        }
+
         transcript = '';
+        console.log('Going back to sleep...');
 
         return result;
       }
