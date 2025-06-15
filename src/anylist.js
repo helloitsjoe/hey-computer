@@ -24,7 +24,10 @@ const titleCase = (name) =>
   name.replace(/\b(\w)/g, (match) => match.toUpperCase());
 
 async function addToList(itemsRaw) {
-  console.log(itemsRaw);
+  if (!itemsRaw) {
+    console.log('No items to add, check transcript matches');
+    return;
+  }
 
   const items = smartSplit(itemsRaw.trim());
   console.log('Items:', items);

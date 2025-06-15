@@ -1,63 +1,87 @@
 const path = require('path');
 const { Cheetah, CheetahErrors } = require('@picovoice/cheetah-node');
 const { PvRecorder } = require('@picovoice/pvrecorder-node');
-const { Porcupine, BuiltinKeyword } = require('@picovoice/porcupine-node');
+// const { Porcupine, BuiltinKeyword } = require('@picovoice/porcupine-node');
+const Bumblebee = require('bumblebee-hotword-node');
 const { preprocessAnylist, addToList } = require('./anylist');
 
 const { CheetahActivationLimitReachedError } = CheetahErrors;
 
 const modelPath = path.join(process.cwd(), 'models');
 
-const PORCUPINE_MODEL_PATH = path.join(modelPath, 'porcupine_params.pv');
+// const PORCUPINE_MODEL_PATH = path.join(modelPath, 'porcupine_params.pv');
 const CHEETAH_MODEL_PATH = path.join(modelPath, 'cheetah_params.pv');
 const ACCESS_KEY = process.env.ACCESS_KEY;
-const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX || 1;
+const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX;
 
 let isAwake = false;
 
-function showDevices() {
+function getDeviceIndex() {
+  const preferredDevices = {
+    'Yeti X Analog Stereo': true,
+    'MacBook Air Microphone': true,
+  };
+
   const devices = PvRecorder.getAvailableDevices();
+  let preferredIndex = 0;
   for (let i = 0; i < devices.length; i++) {
     console.log(`index: ${i}, device name: ${devices[i]}`);
+    if (devices[i] in preferredDevices) {
+      preferredIndex = i;
+    }
   }
+
+  return AUDIO_DEVICE_INDEX ? Number(AUDIO_DEVICE_INDEX) : preferredIndex;
 }
 
 /**
  * Listens for the wake word using Porcupine and then starts
  */
 async function listenForWake() {
-  showDevices();
+  const deviceIndex = getDeviceIndex();
 
-  const porcupine = new Porcupine(
-    ACCESS_KEY,
-    [BuiltinKeyword.COMPUTER],
-    [0.5], // sensitivity
-    PORCUPINE_MODEL_PATH,
-    // TODO: libraryFilePath, // path to the Porcupine library file if needed
-  );
+  const bumblebee = new Bumblebee();
+  bumblebee.setSensitivity(0.5);
+  bumblebee.addHotword('bumblebee');
 
-  const recorder = new PvRecorder(porcupine.frameLength, AUDIO_DEVICE_INDEX);
+  // const porcupine = new Porcupine(
+  //   ACCESS_KEY,
+  //   [BuiltinKeyword.COMPUTER],
+  //   [0.5], // sensitivity
+  //   PORCUPINE_MODEL_PATH,
+  //   // TODO: libraryFilePath, // path to the Porcupine library file if needed
+  // );
+
+  // const recorder = new PvRecorder(porcupine.frameLength, deviceIndex);
+  const recorder = new PvRecorder(512, deviceIndex);
   recorder.start();
 
   console.log(`Listening for wake word on: ${recorder.getSelectedDevice()}...`);
 
-  while (!isAwake) {
-    const pcm = await recorder.read();
-    try {
-      const keywordIndex = porcupine.process(pcm);
-      if (keywordIndex >= 0) {
-        console.log('Wake word detected!');
-        isAwake = true;
-        await run(recorder);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
+  bumblebee.on('hotword', function (hotword) {
+    console.log('Hotword Detected:', hotword);
+    run(recorder);
+  });
+
+  bumblebee.start();
+
+  // while (!isAwake) {
+  //   const pcm = await recorder.read();
+  //   try {
+  //     const keywordIndex = porcupine.process(pcm);
+  //     if (keywordIndex >= 0) {
+  //       console.log('Wake word detected!');
+  //       isAwake = true;
+  //       await run(recorder);
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //   }
+  // }
 
   recorder.stop();
   recorder.release();
-  process.exit();
+  // process.exit();
 }
 
 /**
