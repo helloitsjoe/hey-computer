@@ -1,6 +1,7 @@
 const { ANYLIST_REGEX, preprocessAnylist, addToList } = require('./anylist');
 const { MBTA_REGEX, getNextBus } = require('./mbta');
 const { CLOCK_REGEX, parseClock, handleClockCommand } = require('./clock');
+const { chat } = require('./llm');
 const {
   WEATHER_REGEX,
   parseWeather,
@@ -31,9 +32,12 @@ async function executeCommand(rawTranscript) {
       return await handleWeatherCommand({ period, location });
     }
     default:
-      return {
-        message: `You said: "${transcript}". I don't know what you want me to do.`,
-      };
+      try {
+        return chat(transcript);
+      } catch (err) {
+        console.error(err);
+        return { message: `I'm having trouble chatting right now.` };
+      }
   }
 }
 
