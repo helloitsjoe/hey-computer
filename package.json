@@ -35,6 +35,8 @@
     "@picovoice/porcupine-node": "^3.0.6",
     "@picovoice/pvrecorder-node": "^1.2.8",
     "anylist": "^0.8.4",
+    "leaflet": "^1.9.4",
+    "mbta-client": "^1.1.10",
     "ollama": "^0.5.16"
   }
 }
