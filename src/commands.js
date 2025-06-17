@@ -1,7 +1,6 @@
 const { ANYLIST_REGEX, preprocessAnylist, addToList } = require('./anylist');
 const { MBTA_REGEX, getNextBus } = require('./mbta');
 const { CLOCK_REGEX, parseClock, handleClockCommand } = require('./clock');
-const { chat } = require('./llm');
 const {
   WEATHER_REGEX,
   parseWeather,
@@ -12,7 +11,7 @@ async function executeCommand(rawTranscript) {
   const transcript = rawTranscript.trim();
   if (!transcript || typeof transcript !== 'string') {
     console.error('Invalid transcript provided:', transcript);
-    return { message: 'Invalid transcript' };
+    return { message: "Sorry, I didn't catch that" };
   }
 
   switch (true) {
@@ -31,13 +30,10 @@ async function executeCommand(rawTranscript) {
       const { period, location } = parseWeather(transcript);
       return await handleWeatherCommand({ period, location });
     }
-    default:
-      try {
-        return chat(transcript);
-      } catch (err) {
-        console.error(err);
-        return { message: `I'm having trouble chatting right now.` };
-      }
+    default: {
+      // `stream` response triggers client llm stream request
+      return { message: transcript, type: 'stream-boomerang' };
+    }
   }
 }
 

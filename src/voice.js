@@ -158,8 +158,8 @@ function getCheetah() {
     console.log('Initializing Cheetah...');
     _cheetah = new Cheetah(ACCESS_KEY, {
       modelPath: CHEETAH_MODEL_PATH,
+      // enableAutomaticPunctuation: true,
       // endpointDurationSec: 3, // Default is 1 second
-      // enableAutomaticPunctuation: !disableAutomaticPunctuation,
     });
   }
 
