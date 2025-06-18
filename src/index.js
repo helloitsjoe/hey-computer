@@ -30,6 +30,17 @@ async function main() {
         const parsedUrl = url.parse(req.url, true);
         const prompt = parsedUrl.query?.prompt;
         const speechResponse = await chat(prompt);
+
+        // We should only have a stream on this endpoint
+        if (speechResponse.message) {
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'X-Response-Type': 'json',
+          });
+          res.end(JSON.stringify(speechResponse.message));
+          return;
+        }
+
         res.writeHead(200, {
           'Transfer-Encoding': 'chunked',
           'Content-Type': 'application/json',
