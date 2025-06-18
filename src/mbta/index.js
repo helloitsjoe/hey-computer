@@ -1,6 +1,7 @@
 const MBTA = require('mbta-client');
 
-const MBTA_REGEX = /^(when is|when's) (my|the) (next )?bus( coming)?/i;
+const MBTA_REGEX =
+  /^(when is|when's|how long until) (my|the) (next )?bus( coming| comes)?/i;
 
 const STOP = 2056;
 const PREDICTIONS_LIMIT = 4;
@@ -16,7 +17,7 @@ async function fetchData() {
       stop: STOP,
       // direction_id: route.direction,
       sort: 'departure_time',
-      include: ['stop', 'route'],
+      include: ['stop', 'route', 'vehicle'],
     });
 
     console.log(`Fetched live data`);
@@ -42,14 +43,26 @@ async function fetchData() {
     const departures = selectDepartures(pred, { convertTo: 'min' });
     const includedStop = selectIncluded(rawPred, 'stop');
     const includedRoute = selectIncluded(rawPred, 'route');
+    const includedVehicles = selectIncluded(rawPred, 'vehicle');
+    const ids = includedVehicles.map((v) => v.id).join(',');
 
-    // const id = i;
+    let vehicleCoords = [];
+    try {
+      const vehicles = await mbta.fetchVehicles({ id: ids });
+      vehicleCoords = vehicles.data.map((v) => ({
+        lat: v.attributes.latitude,
+        long: v.attributes.longitude,
+      }));
+    } catch (err) {
+      console.error('Could not fetch vehicles:', err);
+    }
 
     if (!includedStop.length || !includedRoute.length) {
       return {
         // id,
         // morning,
         direction: '',
+        vehicleCoords,
         // customName,
         // for debugging
         _pastDepartMins: departures.filter((min) => min <= 2),
@@ -93,6 +106,7 @@ async function fetchData() {
       isWalkable,
       // customName,
       departMins,
+      vehicleCoords,
       // for debugging
       _pastDepartMins: departures.filter((min) => min <= 2),
       _predictions: rawPred,
@@ -115,13 +129,17 @@ function formatMins(mins) {
 }
 
 async function getNextBus() {
-  const { departMins, error } = await fetchData();
+  const { departMins, error, vehicleCoords } = await fetchData();
 
   if (error) {
     return { message: "I'm having trouble fetching MBTA information." };
   }
 
-  return { message: `Buses in ${formatMins(departMins)} minutes`, type: 'map' };
+  return {
+    message: `${formatMins(departMins)} mins`,
+    type: 'map',
+    data: { vehicleCoords },
+  };
 }
 
 module.exports = { getNextBus, MBTA_REGEX, formatMins };
