@@ -1,8 +1,8 @@
 const Ollama = require('ollama').Ollama;
 const { Readable } = require('node:stream');
 
-const HOST = '192.168.59.110'; // MB Pro
-// const HOST = '192.168.59.111'; // MB Air
+// const HOST = '192.168.59.110'; // MB Pro
+const HOST = '192.168.59.111'; // MB Air
 
 const ollama = new Ollama({ host: `http://${HOST}:11434` });
 
@@ -20,7 +20,7 @@ const PERSONA = 'normal';
 async function chat(prompt, stream = true) {
   const response = await ollama
     .chat({
-      model: 'gemma3',
+      model: 'gemma3:1b',
       messages: [
         {
           role: 'system',

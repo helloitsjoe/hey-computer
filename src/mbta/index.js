@@ -52,6 +52,7 @@ async function fetchData() {
       vehicleCoords = vehicles.data.map((v) => ({
         lat: v.attributes.latitude,
         long: v.attributes.longitude,
+        direction: v.attributes.direction_id,
       }));
     } catch (err) {
       console.error('Could not fetch vehicles:', err);

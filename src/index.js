@@ -2,6 +2,7 @@ const http = require('http');
 const url = require('url');
 const { init, listenForSpeech } = require('./voice');
 const { chat } = require('./llm');
+const { log } = require('./logging');
 
 async function main() {
   return await init((recorder, cheetah) => {
@@ -31,13 +32,13 @@ async function main() {
         const prompt = parsedUrl.query?.prompt;
         const speechResponse = await chat(prompt);
 
-        // We should only have a stream on this endpoint
-        if (speechResponse.message) {
+        if (!speechResponse.stream) {
+          // Something went wrong, just send json response
           res.writeHead(200, {
             'Content-Type': 'application/json',
             'X-Response-Type': 'json',
           });
-          res.end(JSON.stringify(speechResponse.message));
+          res.end(JSON.stringify(speechResponse));
           return;
         }
 
@@ -47,14 +48,23 @@ async function main() {
           'X-Response-Type': 'stream',
         });
 
+        let acc = '';
+
         speechResponse.stream.on('data', (chunk) => {
-          console.log('chunk.message.content', chunk.message.content);
+          acc += chunk.message.content;
+          console.log('content', chunk.message.content);
           res.write(chunk.message.content);
         });
 
         speechResponse.stream.on('end', () => {
           console.log('ending...');
           res.end();
+
+          // Log chat to disk after sending
+          acc.split('\n').forEach((line) => {
+            console.log('line', line);
+            log(line);
+          });
         });
       } else if (req.url === '/voice') {
         const speechResponse = await listenForSpeech(recorder, cheetah);
