@@ -7,7 +7,7 @@
     "test": "vitest",
     "anylist": "node --env-file=.env src/anylist/debug.js",
     "llm": "node --env-file=.env src/llm/debug.js",
-    "tts": "node --env-file=.env src/tts.js",
+    "tts": "node --env-file=.env src/tts/debug.js",
     "dev": "nodemon --env-file=.env src/index.js"
   },
   "repository": {

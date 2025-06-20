@@ -3,6 +3,7 @@ const url = require('url');
 const { init, listenForSpeech } = require('./voice');
 const { chat } = require('./llm');
 const { log } = require('./logging');
+const { speak } = require('./tts');
 
 async function main() {
   return await init((recorder, cheetah) => {
@@ -22,7 +23,7 @@ async function main() {
       // Handle CORS from browser from localhost:3211
       res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3211');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
-      res.setHeader('Access-Control-Expose-Headers', 'X-Response-Type');
+      // res.setHeader('Access-Control-Expose-Headers', 'X-Response-Type');
 
       if (req.url.startsWith('/llm')) {
         console.log('Streaming...');
@@ -34,10 +35,8 @@ async function main() {
 
         if (!speechResponse.stream) {
           // Something went wrong, just send json response
-          res.writeHead(200, {
-            'Content-Type': 'application/json',
-            'X-Response-Type': 'json',
-          });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          speak(speechResponse.message);
           res.end(JSON.stringify(speechResponse));
           return;
         }
@@ -45,21 +44,22 @@ async function main() {
         res.writeHead(200, {
           'Transfer-Encoding': 'chunked',
           'Content-Type': 'application/json',
-          'X-Response-Type': 'stream',
         });
 
         let acc = '';
 
         speechResponse.stream.on('data', (chunk) => {
-          acc += chunk.message.content;
-          console.log('content', chunk.message.content);
-          res.write(chunk.message.content);
+          const { content } = chunk.message;
+          acc += content;
+          console.log('content', content);
+          res.write(content);
         });
 
         speechResponse.stream.on('end', () => {
           console.log('ending...');
           res.end();
 
+          speak(acc);
           // Log chat to disk after sending
           acc.split('\n').forEach((line) => {
             console.log('line', line);
@@ -68,10 +68,11 @@ async function main() {
         });
       } else if (req.url === '/voice') {
         const speechResponse = await listenForSpeech(recorder, cheetah);
-        res.writeHead(200, {
-          'Content-Type': 'application/json',
-          'X-Response-Type': 'json',
-        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        // Don't repeat the user's chat question
+        if (speechResponse.type !== 'stream-boomerang') {
+          speak(speechResponse.message);
+        }
         res.end(JSON.stringify(speechResponse));
       } else {
         res.writeHead(404, { 'Content-Type': 'text/plain' });

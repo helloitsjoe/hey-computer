@@ -7,13 +7,10 @@ const {
 } = require('@picovoice/orca-node');
 
 const ACCESS_KEY = process.env.ACCESS_KEY;
-const modelPath = path.join(
-  process.cwd(),
-  'models',
-  'orca_params_en_female.pv',
-);
+const MODEL = 'orca_params_en_female.pv';
+const modelPath = path.join(process.cwd(), 'models', MODEL);
 const showAudioDevices = true;
-const audioWaitChunks = 0;
+const audioWaitChunks = 1; // Maybe 0?
 const bufferSizeSecs = 20;
 const tokensPerSeconds = 15;
 
@@ -78,17 +75,10 @@ function tokenizeText(text, language) {
   return tokensWithCustomPronunciations;
 }
 
+const deviceMatches = ['JBL', 'Built-in Audio Digital Stereo (HDMI)']; // 'Yeti' as backup
+
 async function speak(text) {
-  // let accessKey = program['access_key'];
-  // let modelFilePath = program['model_file_path'];
-  // let libraryFilePath = program['library_file_path'];
-  // let text = program['text_to_stream'];
-  // let tokensPerSeconds = program['tokens_per_second'];
-  // let audioWaitChunks = program['audio_wait_chunks'];
-  // let bufferSizeSecs = Number(program['buffer_size_secs']);
-  // let deviceIndex = Number(program['audio_device_index']);
-  // let showAudioDevices = program['show_audio_devices'];
-  let deviceIndex = 0;
+  let deviceIndex = null;
 
   const modelFilePrefix = 'orca_params_';
   const langCodeIdx =
@@ -99,23 +89,18 @@ async function speak(text) {
     const devices = PvSpeaker.getAvailableDevices();
     for (let i = 0; i < devices.length; i++) {
       console.log(`index: ${i}, device name: ${devices[i]}`);
-      if (devices[i].includes('Built-in Audio Digital Stereo (HDMI)')) {
-        deviceIndex = i;
-        console.log(`Using ${devices[i]}`);
+    }
+
+    for (const potentialMatch of deviceMatches) {
+      for (let i = 0; i < devices.length; i++) {
+        if (devices[i].includes(potentialMatch)) {
+          deviceIndex = i;
+          console.log(`Using ${devices[i]}`);
+          break;
+        }
       }
     }
-    // return;
   }
-
-  // if (audioWaitChunks === undefined || audioWaitChunks === null) {
-  //   audioWaitChunks = 0;
-  //   if (os.platform() === 'linux') {
-  //     const machine = linuxMachine();
-  //     if (machine.includes('cortex')) {
-  //       audioWaitChunks = 1;
-  //     }
-  //   }
-  // }
 
   try {
     const orca = new Orca(ACCESS_KEY, {
@@ -216,7 +201,5 @@ async function speak(text) {
     }
   }
 }
-
-speak('Hello. My name is moomoo mcmufflebutt');
 
 module.exports = { speak };
