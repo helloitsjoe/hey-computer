@@ -5,11 +5,9 @@ const {
   Orca,
   OrcaActivationLimitReachedError,
 } = require('@picovoice/orca-node');
+const { Language } = require('../settings');
 
 const ACCESS_KEY = process.env.ACCESS_KEY;
-const MODEL = 'orca_params_en_female.pv';
-const modelPath = path.join(process.cwd(), 'models', MODEL);
-const showAudioDevices = true;
 const audioWaitChunks = 1; // Maybe 0?
 const bufferSizeSecs = 20;
 const tokensPerSeconds = 15;
@@ -77,7 +75,12 @@ function tokenizeText(text, language) {
 
 const deviceMatches = ['JBL', 'Built-in Audio Digital Stereo (HDMI)']; // 'Yeti' as backup
 
-async function speak(text) {
+async function speak({ message, skipSpeech }) {
+  if (skipSpeech) {
+    return;
+  }
+  const modelFile = `orca_params_${Language.get()}_female.pv`;
+  const modelPath = path.join(process.cwd(), 'models', modelFile);
   let deviceIndex = null;
 
   const modelFilePrefix = 'orca_params_';
@@ -129,10 +132,8 @@ async function speak(text) {
     let numAudioChunks = 0;
     let isStartedPlaying = false;
 
-    // process.stdout.write('\nSimulated text stream: ');
-
     let timeFirstAudioAvailable = null;
-    const tokens = tokenizeText(text, language);
+    const tokens = tokenizeText(message, language);
 
     const startTime = performance.now();
     for (const token of tokens) {

@@ -6,6 +6,7 @@ const {
   parseWeather,
   handleWeatherCommand,
 } = require('./weather');
+const { SETTINGS_REGEX, updateSettings } = require('./settings');
 
 async function executeCommand(rawTranscript) {
   const transcript = rawTranscript.trim();
@@ -15,6 +16,9 @@ async function executeCommand(rawTranscript) {
   }
 
   switch (true) {
+    case SETTINGS_REGEX.test(transcript): {
+      return updateSettings(transcript);
+    }
     case ANYLIST_REGEX.test(transcript): {
       const { items, list } = preprocessAnylist(transcript);
       return await addToList(items, list);

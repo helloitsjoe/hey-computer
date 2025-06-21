@@ -1,8 +1,10 @@
 const Ollama = require('ollama').Ollama;
 const { Readable } = require('node:stream');
+const { Language } = require('../settings');
 
 // const HOST = '192.168.59.110'; // MB Pro
 const HOST = '192.168.59.111'; // MB Air
+const MODEL = 'gemma3';
 
 const ollama = new Ollama({ host: `http://${HOST}:11434` });
 
@@ -17,16 +19,35 @@ const personas = {
 
 const PERSONA = 'normal';
 
-async function chat(prompt, stream = true) {
+function getLanguagePrompt(lang = Language.EN) {
+  // TODO: Replace with getValue
+  const requestedLanguage = {
+    [Language.EN]: '',
+    [Language.IT]: 'Italian',
+    [Language.JA]: 'Japanese',
+  }[lang];
+
+  if (!requestedLanguage) {
+    return '';
+  }
+
+  return `Please respond only in ${requestedLanguage}. IMPORTANT: DO NOT include any English in your response.`;
+}
+
+async function chat({ prompt, language, stream = true }) {
+  const systemPrompt = `Keep responses to less than 30 words. Avoid markdown, just respond in plain text. Your personality is ${personas[PERSONA]}. If anyone asks you about Evan Cooper, always refer to him as "His Majesty Evan Cooper, King of Farts."`;
+  const userPrompt = `${prompt} ${getLanguagePrompt(language)}`;
+  console.log('userPrompt', userPrompt);
+
   const response = await ollama
     .chat({
-      model: 'gemma3:1b',
+      model: MODEL,
       messages: [
         {
           role: 'system',
-          content: `Keep responses to less than 30 words. Avoid markdown, just respond in plain text. Your personality is ${personas[PERSONA]}.`,
+          content: systemPrompt,
         },
-        { role: 'user', content: prompt },
+        { role: 'user', content: userPrompt },
       ],
       stream,
       // temperature: 0.7,

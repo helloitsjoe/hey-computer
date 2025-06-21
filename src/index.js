@@ -4,6 +4,7 @@ const { init, listenForSpeech } = require('./voice');
 const { chat } = require('./llm');
 const { log } = require('./logging');
 const { speak } = require('./tts');
+const { Language } = require('./settings');
 
 async function main() {
   return await init((recorder, cheetah) => {
@@ -23,7 +24,7 @@ async function main() {
       // Handle CORS from browser from localhost:3211
       res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3211');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
-      // res.setHeader('Access-Control-Expose-Headers', 'X-Response-Type');
+      res.setHeader('Access-Control-Expose-Headers', 'X-Response-Type');
 
       if (req.url.startsWith('/llm')) {
         console.log('Streaming...');
@@ -31,12 +32,16 @@ async function main() {
         // Example: http://localhost:3000/llm?prompt=foo
         const parsedUrl = url.parse(req.url, true);
         const prompt = parsedUrl.query?.prompt;
-        const speechResponse = await chat(prompt);
+        const speechResponse = await chat({
+          prompt,
+          language: Language.get(),
+          stream: true,
+        });
 
         if (!speechResponse.stream) {
           // Something went wrong, just send json response
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          speak(speechResponse.message);
+          speak(speechResponse);
           res.end(JSON.stringify(speechResponse));
           return;
         }
@@ -44,6 +49,7 @@ async function main() {
         res.writeHead(200, {
           'Transfer-Encoding': 'chunked',
           'Content-Type': 'application/json',
+          'X-Response-Type': 'stream',
         });
 
         let acc = '';
@@ -59,7 +65,7 @@ async function main() {
           console.log('ending...');
           res.end();
 
-          speak(acc);
+          speak({ message: acc });
           // Log chat to disk after sending
           acc.split('\n').forEach((line) => {
             console.log('line', line);
@@ -71,7 +77,7 @@ async function main() {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         // Don't repeat the user's chat question
         if (speechResponse.type !== 'stream-boomerang') {
-          speak(speechResponse.message);
+          speak(speechResponse);
         }
         res.end(JSON.stringify(speechResponse));
       } else {
