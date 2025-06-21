@@ -137,7 +137,7 @@ async function getNextBus() {
   }
 
   return {
-    message: `${formatMins(departMins)} mins`,
+    message: `${formatMins(departMins)} minutes`,
     type: 'map',
     data: { vehicleCoords },
   };

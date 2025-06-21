@@ -85,19 +85,17 @@ async function speak(text) {
     modelPath.indexOf(modelFilePrefix) + modelFilePrefix.length;
   const language = modelPath.substring(langCodeIdx, langCodeIdx + 2);
 
-  if (showAudioDevices) {
-    const devices = PvSpeaker.getAvailableDevices();
-    for (let i = 0; i < devices.length; i++) {
-      console.log(`index: ${i}, device name: ${devices[i]}`);
-    }
+  const devices = PvSpeaker.getAvailableDevices();
+  for (let i = 0; i < devices.length; i++) {
+    console.log(`index: ${i}, device name: ${devices[i]}`);
+  }
 
-    for (const potentialMatch of deviceMatches) {
-      for (let i = 0; i < devices.length; i++) {
-        if (devices[i].includes(potentialMatch)) {
-          deviceIndex = i;
-          console.log(`Using ${devices[i]}`);
-          break;
-        }
+  for (const potentialMatch of deviceMatches) {
+    for (let i = 0; i < devices.length; i++) {
+      // Devices are in priority order, if a device has been picked skip the rest
+      if (deviceIndex === null && devices[i].includes(potentialMatch)) {
+        deviceIndex = i;
+        console.log(`Using ${devices[i]}`);
       }
     }
   }
@@ -131,7 +129,7 @@ async function speak(text) {
     let numAudioChunks = 0;
     let isStartedPlaying = false;
 
-    process.stdout.write('\nSimulated text stream: ');
+    // process.stdout.write('\nSimulated text stream: ');
 
     let timeFirstAudioAvailable = null;
     const tokens = tokenizeText(text, language);
