@@ -15,7 +15,7 @@ async function main() {
 // TODO: This is super weird, I should refactor this to just use promises instead of callbacks
 (async () => {
   if (process.env.SKIP_WAKE === 'true') {
-    console.log('Skipping wake word detection, creating server instead.');
+    log('Skipping wake word detection, creating server instead.');
     const { recorder, cheetah } = await init((recorder, cheetah) => {
       return { recorder, cheetah };
     });
@@ -27,7 +27,7 @@ async function main() {
       res.setHeader('Access-Control-Expose-Headers', 'X-Response-Type');
 
       if (req.url.startsWith('/llm')) {
-        console.log('Streaming...');
+        log('Streaming...');
 
         // Example: http://localhost:3000/llm?prompt=foo
         const parsedUrl = url.parse(req.url, true);
@@ -57,19 +57,19 @@ async function main() {
         speechResponse.stream.on('data', (chunk) => {
           const { content } = chunk.message;
           acc += content;
-          console.log('content', content);
+          log('content', content);
           res.write(content);
         });
 
         speechResponse.stream.on('end', () => {
-          console.log('ending...');
+          log('ending...');
           res.end();
 
           speak({ message: acc });
+          log(prompt, { filePrefix: 'chat' });
           // Log chat to disk after sending
           acc.split('\n').forEach((line) => {
-            console.log('line', line);
-            log(line);
+            log(`line, ${line}`, { filePrefix: 'chat' });
           });
         });
       } else if (req.url === '/voice') {
@@ -87,12 +87,12 @@ async function main() {
     });
 
     server.listen(3000, 'localhost', () => {
-      console.log('Server is running at http://localhost:3000/voice');
+      log('Server is running at http://localhost:3000/voice');
     });
   } else {
-    console.log('Initializing voice module with wake word detection...');
+    log('Initializing voice module with wake word detection...');
     main().catch((err) => {
-      console.error('Error initializing voice module:', err);
+      console.lerror('Error initializing voice module:', err);
       process.exit(1);
     });
   }

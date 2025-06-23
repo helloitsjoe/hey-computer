@@ -1,6 +1,8 @@
 const SETTINGS_REGEX =
   /^(?:please )?set (?:the)? (language|personality) to (\w+)/i;
 
+let globalSkipSpeech = false;
+
 class Language {
   static EN = 'en';
   static IT = 'it';
@@ -62,4 +64,10 @@ function updateSettings(transcript) {
   };
 }
 
-module.exports = { Language, Persona, updateSettings, SETTINGS_REGEX };
+module.exports = {
+  Language,
+  Persona,
+  updateSettings,
+  SETTINGS_REGEX,
+  globalSkipSpeech,
+};

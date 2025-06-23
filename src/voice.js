@@ -45,7 +45,12 @@ async function init(cb) {
 
   const frameLength = cheetah.frameLength || porcupine.frameLength;
 
-  const recorder = new PvRecorder(frameLength, deviceIndex);
+  let recorder;
+  try {
+    recorder = new PvRecorder(frameLength, deviceIndex);
+  } catch (err) {
+    console.error('Error starting PvRecorder:', err);
+  }
   recorder.start();
 
   console.log(`Listening for wake word on: ${recorder.getSelectedDevice()}...`);

@@ -5,10 +5,10 @@ const {
   Orca,
   OrcaActivationLimitReachedError,
 } = require('@picovoice/orca-node');
-const { Language } = require('../settings');
+const { Language, globalSkipSpeech } = require('../settings');
 
 const ACCESS_KEY = process.env.ACCESS_KEY;
-const audioWaitChunks = 1; // Maybe 0?
+const audioWaitChunks = 0; // Maybe 1 for bluetooth?
 const bufferSizeSecs = 20;
 const tokensPerSeconds = 15;
 
@@ -76,7 +76,7 @@ function tokenizeText(text, language) {
 const deviceMatches = ['JBL', 'Built-in Audio Digital Stereo (HDMI)']; // 'Yeti' as backup
 
 async function speak({ message, skipSpeech }) {
-  if (skipSpeech) {
+  if (globalSkipSpeech || skipSpeech) {
     return;
   }
   const modelFile = `orca_params_${Language.get()}_female.pv`;

@@ -2,20 +2,26 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_LOG_DIR = path.join(process.env.HOME, '.logs', 'hey-computer');
-const DEFAULT_LOG_FILE = path.join(DEFAULT_LOG_DIR, '0.log');
+const DEFAULT_LOG_PREFIX = 'main';
 const DEFAULT_LOG_LEVEL = 'info';
+const MB_PER_FILE = 5;
+const MAX_FILES = 20;
 
-function maybeRenameFiles() {
-  const originalFile = DEFAULT_LOG_FILE;
+function getFileFromPrefix(prefix) {
+  return path.join(DEFAULT_LOG_DIR, `${prefix}-0.log`);
+}
+
+function maybeRenameFiles(prefix = DEFAULT_LOG_PREFIX) {
+  const originalFile = getFileFromPrefix(prefix);
 
   if (fs.existsSync(originalFile)) {
     const fileSize = fs.statSync(originalFile).size;
 
-    if (fileSize > 5 * 1024 * 1024) {
+    if (fileSize > MB_PER_FILE * 1024 * 1024) {
       // Step 1: Shift existing files in reverse order (from 5.log down to 0.log)
-      for (let i = 5; i >= 0; i--) {
-        const src = `${i}.log`;
-        const dest = `${i + 1}.log`;
+      for (let i = MAX_FILES; i >= 0; i--) {
+        const src = `${prefix}-${i}.log`;
+        const dest = `${prefix}-${i + 1}.log`;
 
         if (fs.existsSync(src)) {
           fs.renameSync(src, dest);
@@ -31,7 +37,11 @@ function formatLogEntry(level, message) {
   return `${timestamp} [${level.toUpperCase()}] ${message}\n`;
 }
 
-function log(message, level = DEFAULT_LOG_LEVEL) {
+function log(
+  message,
+  { level = DEFAULT_LOG_LEVEL, filePrefix = DEFAULT_LOG_PREFIX } = {},
+) {
+  const file = getFileFromPrefix(filePrefix);
   // Define log levels in order of severity
   const levels = ['debug', 'info', 'warn', 'error'];
 
@@ -42,12 +52,14 @@ function log(message, level = DEFAULT_LOG_LEVEL) {
   const logEntry = formatLogEntry(level, message);
 
   try {
-    fs.appendFileSync(DEFAULT_LOG_FILE, logEntry);
+    // TODO: handle multiple args (use createLogger)
+    console[level](message);
+    fs.appendFileSync(file, logEntry);
   } catch (err) {
     console.error('Error writing to log file:', err);
   }
 
-  maybeRenameFiles();
+  maybeRenameFiles(filePrefix);
 }
 
 module.exports = { log };
