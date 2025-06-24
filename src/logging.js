@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { SAVE_DIR } = require('./utils');
 
-const DEFAULT_LOG_DIR = path.join(process.env.HOME, '.logs', 'hey-computer');
+const DEFAULT_LOG_DIR = path.join(SAVE_DIR, 'logs');
 const DEFAULT_LOG_PREFIX = 'main';
 const DEFAULT_LOG_LEVEL = 'info';
 const MB_PER_FILE = 5;

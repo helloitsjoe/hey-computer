@@ -1,3 +1,7 @@
+const fs = require('fs');
+const path = require('path');
+const { SAVE_DIR } = require('../utils');
+
 // Project: clock-parser
 // Regex should handle various clock intents:
 // Timer, alarm
@@ -9,6 +13,7 @@
 //  - Cancel the alarm
 //  - "Set a timer" should ask how long
 
+const CLOCK_FILE = path.join(SAVE_DIR, 'clock.json');
 const CLOCK_REGEX =
   /^(set|cancel)\s*(?:a|an|my|the)?\s*(timer|alarm)(?: for)?(.*)?$/i;
 
@@ -73,12 +78,8 @@ function parseTimerString(timeString) {
   return parsed;
 }
 
-const timers = {};
-
 async function handleClockCommand({ type, action, time }) {
   console.log(`Handling ${action} for ${type} with time: ${time}`);
-
-  // TODO: Save to a file or DB to persist across restarts
 
   // Simulate handling the clock command
   if (type === 'timer') {
@@ -87,7 +88,54 @@ async function handleClockCommand({ type, action, time }) {
         return "You didn't tell me how long!";
       }
 
-      return `Timer set for ${time || 'a duration you need to specify'}.`;
+      const parsedTime = parseTimerString(time);
+      const totalSeconds =
+        parsedTime.hours * 3600 + parsedTime.minutes * 60 + parsedTime.seconds;
+      if (totalSeconds <= 0) {
+        return 'Invalid time specified for the timer.';
+      }
+
+      const triggerTimeStamp = Date.now() + totalSeconds * 1000;
+
+      // Load existing timers or create a new object
+      let timers = {};
+      if (fs.existsSync(CLOCK_FILE)) {
+        timers = JSON.parse(fs.readFileSync(CLOCK_FILE, 'utf-8')).timers;
+      }
+
+      timers[triggerTimeStamp] = {
+        // TODO: Human friendly name
+        id: triggerTimeStamp,
+        type: 'timer',
+        triggerTimeStamp,
+      };
+
+      // Save timer to disk
+      fs.writeFileSync(CLOCK_FILE, JSON.stringify(timers, null, 2));
+
+      console.log(
+        `Timer set with ID: ${triggerTimeStamp}`,
+        timers[triggerTimeStamp],
+      );
+
+      // Return a confirmation message, only including the units of time that contain a non-zero value
+      const parts = [];
+      const unitNames = ['hours', 'minutes', 'seconds'];
+      unitNames.forEach((unit) => {
+        if (parsedTime[unit] > 0) {
+          parts.push(
+            `${parsedTime[unit]} ${unit}${parsedTime[unit] > 1 ? 's' : ''}`,
+          );
+        }
+      });
+
+      const timeString = parts.join(', ');
+      return {
+        message: `${timeString} timer starting now.`,
+        type: 'timer',
+        // TODO: name
+        data: { triggerTimeStamp },
+      };
     } else if (action === 'cancel') {
       // If only one timer, cancel, otherwise ask which one
       return 'Timer cancelled.';
