@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseClock, parseTimerString } from '../clock';
+import { parseClock, parseTimerString, convertStringToNumber } from '../clock';
 
 describe('parseClock', () => {
   it('should return an empty object for no match', () => {
@@ -28,16 +28,34 @@ describe('parseClock', () => {
 
 describe('parseTimerString', () => {
   it.each`
-    input                                 | expected
-    ${'30 seconds'}                       | ${{ hours: 0, minutes: 0, seconds: 30 }}
-    ${'5 minutes'}                        | ${{ hours: 0, minutes: 5, seconds: 0 }}
-    ${'5 minutes and 30 seconds'}         | ${{ hours: 0, minutes: 5, seconds: 30 }}
-    ${'3 hours and 5 minutes'}            | ${{ hours: 3, minutes: 5, seconds: 0 }}
-    ${'3 hours 5 minutes 40 seconds'}     | ${{ hours: 3, minutes: 5, seconds: 40 }}
-    ${'3 hours 5 minutes and 40 seconds'} | ${{ hours: 3, minutes: 5, seconds: 40 }}
+    input                                                              | expected
+    ${'30 seconds'}                                                    | ${{ hours: 0, minutes: 0, seconds: 30 }}
+    ${'5 minutes'}                                                     | ${{ hours: 0, minutes: 5, seconds: 0 }}
+    ${'5 minutes and 30 seconds'}                                      | ${{ hours: 0, minutes: 5, seconds: 30 }}
+    ${'3 hours and 5 minutes'}                                         | ${{ hours: 3, minutes: 5, seconds: 0 }}
+    ${'3 hours 5 minutes 40 seconds'}                                  | ${{ hours: 3, minutes: 5, seconds: 40 }}
+    ${'3 hours 5 minutes and 40 seconds'}                              | ${{ hours: 3, minutes: 5, seconds: 40 }}
+    ${'twenty three hours forty five minutes and thirty nine seconds'} | ${{ hours: 23, minutes: 45, seconds: 39 }}
   `('$input', ({ input, expected }) => {
     // TODO:
-    // ${'three hours forty five minutes and thirty seconds'} | ${{ hours: 3, minutes: 45, seconds: 30 }}
     expect(parseTimerString(input)).toEqual(expected);
+  });
+});
+
+describe('convertStringToNumber', () => {
+  it.each`
+    input                                                            | expected
+    ${'one'}                                                         | ${1}
+    ${'thirty'}                                                      | ${30}
+    ${'forty five'}                                                  | ${45}
+    ${'one hundred fifty'}                                           | ${150}
+    ${'one hundred and thirty six'}                                  | ${136}
+    ${'three hundred and thirty six'}                                | ${336}
+    ${'one thousand two hundred and twelve'}                         | ${1212}
+    ${'one hundred thousand eighty'}                                 | ${100_080}
+    ${'one hundred twenty three thousand three hundred and fifteen'} | ${123_315}
+    ${'three hundred and three thousand and fifteen'}                | ${303_015}
+  `('$input', ({ input, expected }) => {
+    expect(convertStringToNumber(input)).toBe(expected);
   });
 });

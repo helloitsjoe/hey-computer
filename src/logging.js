@@ -8,6 +8,8 @@ const DEFAULT_LOG_LEVEL = 'info';
 const MB_PER_FILE = 5;
 const MAX_FILES = 20;
 
+fs.mkdirSync(DEFAULT_LOG_DIR, { recursive: true });
+
 function getFileFromPrefix(prefix) {
   return path.join(DEFAULT_LOG_DIR, `${prefix}-0.log`);
 }

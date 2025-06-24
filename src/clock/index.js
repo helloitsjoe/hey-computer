@@ -54,28 +54,100 @@ function getUnit(input) {
 }
 
 function parseTimerString(timeString) {
-  const pattern = /^(?:(\d+)\s*(seconds|minutes|hours)?)\s*(?:and\s*)?/i;
-  const parsed = { hours: 0, minutes: 0, seconds: 0 };
+  let parts = timeString.replaceAll(' and', '').split(' ');
+  const parsedWords = { hours: '', minutes: '', seconds: '' };
 
-  while (timeString.trim().length > 0) {
-    const match = timeString.match(pattern);
-    console.log(' match', match);
-    if (match) {
-      // TODO:
-      // Remove , from thousands
-      // Parse word numbers if needed
-      const num = parseInt(match[1]);
-      const unit = getUnit(match[2]);
-      parsed[unit] = num;
-      const toRemove = match[0];
-      timeString = timeString.substring(toRemove.length);
-    } else {
-      console.log(`No match in ${timeString}`);
-      break;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (['hours', 'minutes', 'seconds'].includes(part)) {
+      parsedWords[part] = parts.slice(0, i).join(' ');
+      parts = parts.slice(i + 1);
+      i = 0;
     }
   }
 
-  return parsed;
+  return {
+    hours: convertStringToNumber(parsedWords.hours),
+    minutes: convertStringToNumber(parsedWords.minutes),
+    seconds: convertStringToNumber(parsedWords.seconds),
+  };
+}
+
+function convertStringToNumber(input) {
+  console.log('input', input);
+  if (typeof input === 'number' || Number(input) === Number(input)) {
+    return Number(input);
+  }
+  const parts = input.replaceAll(' and', '').split(' ');
+  console.log('parts', parts);
+
+  const wordToNum = {
+    zero: 0,
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+    eleven: 11,
+    twelve: 12,
+    thirteen: 13,
+    fourteen: 14,
+    fifteen: 15,
+    sixteen: 16,
+    seventeen: 17,
+    eighteen: 18,
+    nineteen: 19,
+    twenty: 20,
+    thirty: 30,
+    forty: 40,
+    fifty: 50,
+    sixty: 60,
+    seventy: 70,
+    eighty: 80,
+    ninety: 90,
+    hundred: 100,
+    thousand: 1000,
+  };
+
+  let current = 0;
+  let prevMultiple = null;
+
+  // TODO: Millions
+  const multiples = {
+    hundred: 0,
+    thousand: 0,
+    // million: 0,
+  };
+
+  for (const part of parts) {
+    if (Object.keys(multiples).includes(part)) {
+      if (prevMultiple === 'hundred' && part === 'thousand') {
+        multiples[part] = (multiples.hundred + current) * wordToNum[part];
+        multiples[prevMultiple] = 0;
+        prevMultiple = null;
+        current = 0;
+        continue;
+      }
+
+      multiples[part] = (current || 1) * wordToNum[part];
+      prevMultiple = part;
+      current = 0;
+      continue;
+    }
+    current += wordToNum[part];
+  }
+
+  let total = current;
+  for (const val of Object.values(multiples)) {
+    total += val;
+  }
+
+  return total;
 }
 
 async function handleClockCommand({ type, action, time }) {
@@ -85,14 +157,19 @@ async function handleClockCommand({ type, action, time }) {
   if (type === 'timer') {
     if (action === 'set') {
       if (!time) {
-        return "You didn't tell me how long!";
+        return { message: "You didn't tell me how long!" };
       }
 
       const parsedTime = parseTimerString(time);
+      if (!parsedTime) {
+        return { message: `Invalid time specified for the timer: ${time}` };
+      }
+
       const totalSeconds =
         parsedTime.hours * 3600 + parsedTime.minutes * 60 + parsedTime.seconds;
+
       if (totalSeconds <= 0) {
-        return 'Invalid time specified for the timer.';
+        return { message: `Time must be a positive number` };
       }
 
       const triggerTimeStamp = Date.now() + totalSeconds * 1000;
@@ -111,7 +188,7 @@ async function handleClockCommand({ type, action, time }) {
       };
 
       // Save timer to disk
-      fs.writeFileSync(CLOCK_FILE, JSON.stringify(timers, null, 2));
+      fs.writeFileSync(CLOCK_FILE, JSON.stringify({ timers }, null, 2));
 
       console.log(
         `Timer set with ID: ${triggerTimeStamp}`,
@@ -124,7 +201,7 @@ async function handleClockCommand({ type, action, time }) {
       unitNames.forEach((unit) => {
         if (parsedTime[unit] > 0) {
           parts.push(
-            `${parsedTime[unit]} ${unit}${parsedTime[unit] > 1 ? 's' : ''}`,
+            `${parsedTime[unit]} ${parsedTime[unit] === 1 ? unit.substring(0, unit.length - 1) : unit}`,
           );
         }
       });
@@ -153,8 +230,9 @@ async function handleClockCommand({ type, action, time }) {
 }
 
 module.exports = {
+  CLOCK_REGEX,
   parseClock,
   handleClockCommand,
-  CLOCK_REGEX,
   parseTimerString,
+  convertStringToNumber,
 };
