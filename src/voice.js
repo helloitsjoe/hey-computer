@@ -15,6 +15,9 @@ const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX;
 const SKIP_WAKE = process.env.SKIP_WAKE === 'true';
 
 let isAwake = false;
+if (SKIP_WAKE) {
+  isAwake = true;
+}
 
 function getDeviceIndex() {
   const preferredDevices = {
@@ -34,25 +37,7 @@ function getDeviceIndex() {
   return Number(AUDIO_DEVICE_INDEX) || 0;
 }
 
-/**
- * Listens for the wake word using Porcupine and then starts
- */
-async function init(cb) {
-  const deviceIndex = getDeviceIndex();
-
-  const porcupine = getPorcupine();
-  const cheetah = getCheetah();
-
-  const frameLength = cheetah.frameLength || porcupine.frameLength;
-
-  let recorder;
-  try {
-    recorder = new PvRecorder(frameLength, deviceIndex);
-  } catch (err) {
-    console.error('Error starting PvRecorder:', err);
-  }
-  recorder.start();
-
+async function listenForWake(cb, { recorder, porcupine, cheetah }) {
   console.log(`Listening for wake word on: ${recorder.getSelectedDevice()}...`);
 
   while (!isAwake) {
@@ -62,17 +47,21 @@ async function init(cb) {
       if (keywordIndex >= 0) {
         console.log('Wake word detected!');
         isAwake = true;
-        return cb(recorder, cheetah);
+
+        return listenForSpeech({ recorder, cheetah });
+        // return cb();
       }
     } catch (err) {
       console.error(err);
     }
   }
+}
 
+function shutdown({ recorder, cheetah }) {
   recorder.stop();
   recorder.release();
   cheetah.release();
-  process.exit();
+  // process.exit();
 }
 
 /**
@@ -80,7 +69,7 @@ async function init(cb) {
  *
  * @param {PvRecorder} recorder - The recorder instance to use for audio input.
  */
-async function listenForSpeech(recorder, cheetah) {
+async function listenForSpeech({ recorder, cheetah }) {
   console.log(`Listening for speech on: ${recorder.getSelectedDevice()}...`);
 
   let transcript = '';
@@ -171,7 +160,29 @@ function getCheetah() {
   return _cheetah;
 }
 
+function initVoice() {
+  const deviceIndex = getDeviceIndex();
+
+  const porcupine = getPorcupine();
+  const cheetah = getCheetah();
+
+  const frameLength = cheetah.frameLength || porcupine.frameLength;
+
+  let recorder;
+  try {
+    recorder = new PvRecorder(frameLength, deviceIndex);
+  } catch (err) {
+    console.error('Error starting PvRecorder:', err);
+  }
+  recorder.start();
+
+  return {
+    onWakeWord: (cb) => listenForWake(cb, { recorder, porcupine, cheetah }),
+    shutdown: () => shutdown({ recorder, cheetah }),
+    listenForSpeech: () => listenForSpeech({ recorder, cheetah }),
+  };
+}
+
 module.exports = {
-  init,
-  listenForSpeech,
+  initVoice,
 };
