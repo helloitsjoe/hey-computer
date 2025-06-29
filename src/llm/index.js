@@ -3,7 +3,7 @@ const { Readable } = require('node:stream');
 const { Language } = require('../settings');
 
 // const HOST = '192.168.59.110'; // MB Pro
-const HOST = '192.168.59.111'; // MB Air
+const HOST = '192.168.59.100'; // MB Air
 const MODEL = 'gemma3';
 
 const ollama = new Ollama({ host: `http://${HOST}:11434` });

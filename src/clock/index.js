@@ -79,7 +79,6 @@ function convertStringToNumber(input) {
     return Number(input);
   }
   const parts = input.replaceAll(' and', '').split(' ');
-  console.log('parts', parts);
 
   const wordToNum = {
     zero: 0,
@@ -177,7 +176,7 @@ async function handleClockCommand({ type, action, time }) {
       // Load existing timers or create a new object
       let timers = {};
       if (fs.existsSync(CLOCK_FILE)) {
-        timers = JSON.parse(fs.readFileSync(CLOCK_FILE, 'utf-8')).timers;
+        timers = JSON.parse(fs.readFileSync(CLOCK_FILE, 'utf-8')).timers || {};
       }
 
       timers[triggerTimeStamp] = {
