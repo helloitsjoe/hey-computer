@@ -190,6 +190,7 @@ async function speak({ message, skipSpeech }) {
     }
     stream.close();
     orca.release();
+    console.log('Audio finished');
   } catch (err) {
     if (err instanceof OrcaActivationLimitReachedError) {
       console.error(

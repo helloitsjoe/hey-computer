@@ -1,8 +1,10 @@
 const path = require('path');
+const { EventEmitter } = require('events');
 const { Cheetah, CheetahErrors } = require('@picovoice/cheetah-node');
 const { PvRecorder } = require('@picovoice/pvrecorder-node');
 const { Porcupine, BuiltinKeyword } = require('@picovoice/porcupine-node');
 const { executeCommand } = require('./commands');
+const { SKIP_WAKE } = require('./utils');
 
 const { CheetahActivationLimitReachedError } = CheetahErrors;
 
@@ -12,12 +14,13 @@ const PORCUPINE_MODEL_PATH = path.join(modelPath, 'porcupine_params.pv');
 const CHEETAH_MODEL_PATH = path.join(modelPath, 'cheetah_params.pv');
 const ACCESS_KEY = process.env.ACCESS_KEY;
 const AUDIO_DEVICE_INDEX = process.env.AUDIO_DEVICE_INDEX;
-const SKIP_WAKE = process.env.SKIP_WAKE === 'true';
 
 let isAwake = false;
 if (SKIP_WAKE) {
   isAwake = true;
 }
+
+const wakeEmitter = new EventEmitter();
 
 function getDeviceIndex() {
   const preferredDevices = {
@@ -37,7 +40,7 @@ function getDeviceIndex() {
   return Number(AUDIO_DEVICE_INDEX) || 0;
 }
 
-async function listenForWake(cb, { recorder, porcupine, cheetah }) {
+async function listenForWake({ recorder, porcupine /*, cheetah */ }) {
   console.log(`Listening for wake word on: ${recorder.getSelectedDevice()}...`);
 
   while (!isAwake) {
@@ -46,22 +49,12 @@ async function listenForWake(cb, { recorder, porcupine, cheetah }) {
       const keywordIndex = porcupine.process(pcm);
       if (keywordIndex >= 0) {
         console.log('Wake word detected!');
-        isAwake = true;
-
-        return listenForSpeech({ recorder, cheetah });
-        // return cb();
+        wakeEmitter.emit('wake');
       }
     } catch (err) {
       console.error(err);
     }
   }
-}
-
-function shutdown({ recorder, cheetah }) {
-  recorder.stop();
-  recorder.release();
-  cheetah.release();
-  // process.exit();
 }
 
 /**
@@ -99,12 +92,9 @@ async function listenForSpeech({ recorder, cheetah }) {
         console.log('Command executed successfully.');
         console.log('Result:', result);
 
-        if (!SKIP_WAKE) {
-          isAwake = false;
-        }
-
         transcript = '';
         console.log('Going back to sleep...');
+        wakeEmitter.emit('sleep');
 
         return result;
       }
@@ -114,7 +104,8 @@ async function listenForSpeech({ recorder, cheetah }) {
       } else {
         console.error(err);
       }
-      isAwake = false;
+      console.log('Going back to sleep...');
+      wakeEmitter.emit('sleep');
       transcript = '';
     }
   }
@@ -176,13 +167,41 @@ function initVoice() {
   }
   recorder.start();
 
+  let onWakeCb = null;
+
+  wakeEmitter.on('wake', () => {
+    if (!onWakeCb) {
+      console.warn('No wake callback registered!');
+    }
+    isAwake = true;
+    onWakeCb();
+  });
+
+  wakeEmitter.on('sleep', () => {
+    if (!SKIP_WAKE) {
+      isAwake = false;
+    }
+    listenForWake({ recorder, porcupine });
+  });
+
   return {
-    onWakeWord: (cb) => listenForWake(cb, { recorder, porcupine, cheetah }),
+    listenForWake: (cb) => {
+      onWakeCb = cb;
+      wakeEmitter.emit('sleep');
+    },
     shutdown: () => shutdown({ recorder, cheetah }),
     listenForSpeech: () => listenForSpeech({ recorder, cheetah }),
   };
 }
 
+function shutdown({ recorder, cheetah }) {
+  recorder.stop();
+  recorder.release();
+  cheetah.release();
+  // process.exit();
+}
+
 module.exports = {
   initVoice,
+  SKIP_WAKE,
 };

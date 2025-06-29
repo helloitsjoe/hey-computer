@@ -5,24 +5,37 @@ const { chat } = require('./llm');
 const { log } = require('./logging');
 const { speak } = require('./tts');
 const { Language } = require('./settings');
+const { SKIP_WAKE } = require('./utils');
 
 const voice = initVoice();
 
 const server = http.createServer(async (req, res) => {
-  // voice.onWakeWord(({message}) => {
-  //   listenForSpeech
-  //   // Record voice
-  //   // Send ServerSentEvent with 'listening' state
-  //   // Process voice and sent follow-up SSE with response
-  //   // OR just send initial SSE to trigger request on FE
-  // });
-
   // Handle CORS from browser from localhost:3211
   res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3211');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
   res.setHeader('Access-Control-Expose-Headers', 'X-Response-Type');
 
-  if (req.url.startsWith('/llm')) {
+  if (req.url.startsWith('/sse')) {
+    console.log('Creating SSE connection');
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+    });
+
+    res.write('data: {"message": "CONNECTED"}\n\n');
+
+    if (!SKIP_WAKE) {
+      voice.listenForWake(() => {
+        console.log('Waking the kraken...');
+        // TODO: Avoid this back-and-forth by sending voice text to FE?
+        res.write('data: {"message": "AWAKEN"}\n\n');
+      });
+    }
+
+    req.on('close', () => {
+      res.end();
+    });
+  } else if (req.url.startsWith('/llm')) {
     log('Streaming...');
 
     // Example: http://localhost:3000/llm?prompt=foo
@@ -70,6 +83,13 @@ const server = http.createServer(async (req, res) => {
     });
   } else if (req.url === '/voice') {
     const speechResponse = await voice.listenForSpeech();
+    if (!speechResponse) {
+      console.log(
+        'No result from command, something went wrong. Did isAwake get set false too early?',
+      );
+      return res.end(JSON.stringify({ message: 'Something went wrong' }));
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     // Don't repeat the user's chat question
     if (speechResponse.type !== 'stream-boomerang') {
