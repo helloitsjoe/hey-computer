@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { EventEmitter } = require('events');
 const { SAVE_DIR } = require('../utils');
 
 // Project: clock-parser
@@ -15,7 +16,26 @@ const { SAVE_DIR } = require('../utils');
 
 const CLOCK_FILE = path.join(SAVE_DIR, 'clock.json');
 const CLOCK_REGEX =
-  /^(set|cancel)\s*(?:a|an|my|the)?\s*(timer|alarm)(?: for)?(.*)?$/i;
+  /^(set|cancel|stop)\s*(?:a|an|my|the)?\s*(timer|alarm)(?: for)?(.*)?$/i;
+
+const clockEmitter = new EventEmitter();
+
+function loadTimers() {
+  try {
+    return JSON.parse(fs.readFileSync(CLOCK_FILE, 'utf-8')).timers || {};
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return {};
+    } else {
+      console.error('Error reaading file', err);
+      return {};
+    }
+  }
+}
+
+function saveTimers(timers) {
+  fs.writeFileSync(CLOCK_FILE, JSON.stringify({ timers }, null, 2));
+}
 
 function parseClock(transcript) {
   const match = transcript.match(CLOCK_REGEX);
@@ -24,34 +44,34 @@ function parseClock(transcript) {
     return {};
   }
 
-  const action = match[1].toLowerCase(); // 'set' or 'cancel'
+  const action = match[1].toLowerCase(); // 'set', 'stop' or 'cancel'
   const type = match[2].toLowerCase(); // 'timer' or 'alarm'
   const time = match[3] ? match[3].trim() : null; // e.g. '5 minutes', '7 AM'
 
   return { type, action, time };
 }
 
-function getUnit(input) {
-  switch (input) {
-    case 'min':
-    case 'mins':
-    case 'minute':
-    case 'minutes':
-      return 'minutes';
-    case 'hr':
-    case 'hrs':
-    case 'hour':
-    case 'hours':
-      return 'hours';
-    case 'sec':
-    case 'secs':
-    case 'second':
-    case 'seconds':
-      return 'seconds';
-    default:
-      throw new Error(`Unexpected unit: ${input}`);
-  }
-}
+// function getUnit(input) {
+//   switch (input) {
+//     case 'min':
+//     case 'mins':
+//     case 'minute':
+//     case 'minutes':
+//       return 'minutes';
+//     case 'hr':
+//     case 'hrs':
+//     case 'hour':
+//     case 'hours':
+//       return 'hours';
+//     case 'sec':
+//     case 'secs':
+//     case 'second':
+//     case 'seconds':
+//       return 'seconds';
+//     default:
+//       throw new Error(`Unexpected unit: ${input}`);
+//   }
+// }
 
 function parseTimerString(timeString) {
   let parts = timeString.replaceAll(' and', '').split(' ');
@@ -154,7 +174,10 @@ async function handleClockCommand({ type, action, time }) {
 
   // Simulate handling the clock command
   if (type === 'timer') {
-    if (action === 'set') {
+    if (action === 'stop') {
+      clockEmitter.emit('stop-timer');
+      return;
+    } else if (action === 'set') {
       if (!time) {
         return { message: "You didn't tell me how long!" };
       }
@@ -174,10 +197,7 @@ async function handleClockCommand({ type, action, time }) {
       const triggerTimeStamp = Date.now() + totalSeconds * 1000;
 
       // Load existing timers or create a new object
-      let timers = {};
-      if (fs.existsSync(CLOCK_FILE)) {
-        timers = JSON.parse(fs.readFileSync(CLOCK_FILE, 'utf-8')).timers || {};
-      }
+      const timers = loadTimers();
 
       timers[triggerTimeStamp] = {
         // TODO: Human friendly name
@@ -186,8 +206,10 @@ async function handleClockCommand({ type, action, time }) {
         triggerTimeStamp,
       };
 
+      setTimer({ triggerTimeStamp });
+
       // Save timer to disk
-      fs.writeFileSync(CLOCK_FILE, JSON.stringify({ timers }, null, 2));
+      saveTimers(timers);
 
       console.log(
         `Timer set with ID: ${triggerTimeStamp}`,
@@ -200,7 +222,7 @@ async function handleClockCommand({ type, action, time }) {
       unitNames.forEach((unit) => {
         if (parsedTime[unit] > 0) {
           parts.push(
-            `${parsedTime[unit]} ${parsedTime[unit] === 1 ? unit.substring(0, unit.length - 1) : unit}`,
+            `${parsedTime[unit]} ${unit.substring(0, unit.length - 1)}`,
           );
         }
       });
@@ -228,10 +250,41 @@ async function handleClockCommand({ type, action, time }) {
   return `Unknown command: ${action} for ${type}.`;
 }
 
+async function initSavedTimers() {
+  const timers = loadTimers();
+  const entries = Object.entries(timers);
+
+  for (let i = 0; i < entries.length; i++) {
+    const [id, { name, triggerTimeStamp }] = entries[i];
+
+    if (triggerTimeStamp < Date.now()) {
+      console.log(`Timer ${id} past due, will be deleted`);
+      delete timers[id];
+    } else {
+      const duration = triggerTimeStamp - Date.now();
+      console.log(`Timer will go off in ${duration / 1000} sec`);
+      setTimer({ name, triggerTimeStamp });
+    }
+  }
+
+  saveTimers(timers);
+}
+
+function setTimer({ name, triggerTimeStamp }) {
+  const duration = triggerTimeStamp - Date.now();
+
+  return setTimeout(() => {
+    clockEmitter.emit('trigger-timer');
+  }, duration);
+}
+
 module.exports = {
   CLOCK_REGEX,
+  setTimer,
   parseClock,
-  handleClockCommand,
+  clockEmitter,
+  initSavedTimers,
   parseTimerString,
+  handleClockCommand,
   convertStringToNumber,
 };

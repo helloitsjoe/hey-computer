@@ -7,6 +7,7 @@ const { speak } = require('./tts');
 const { Language } = require('./settings');
 const { SKIP_WAKE } = require('./utils');
 const { executeCommand } = require('./commands');
+const { clockEmitter } = require('./clock');
 
 const voice = initVoice();
 
@@ -32,6 +33,16 @@ const server = http.createServer(async (req, res) => {
         res.write('data: {"message": "AWAKEN"}\n\n');
       });
     }
+
+    clockEmitter.on('trigger-timer', () => {
+      console.log(`Timer finished at ${new Date().toISOString()}`);
+      res.write('data: {"message":"TIMER"}\n\n');
+    });
+
+    clockEmitter.on('stop-timer', () => {
+      console.log(`Stopping timer`);
+      res.write('data: {"message":"TIMER_OFF"}\n\n');
+    });
 
     req.on('close', () => {
       res.end();
