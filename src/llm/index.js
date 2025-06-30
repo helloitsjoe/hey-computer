@@ -1,6 +1,7 @@
 const Ollama = require('ollama').Ollama;
 const { Readable } = require('node:stream');
 const { Language } = require('../settings');
+const { getSystemPrompt } = require('./system-prompt');
 
 // const HOST = '192.168.59.110'; // MB Pro
 const HOST = '192.168.59.100'; // MB Air
@@ -35,7 +36,6 @@ function getLanguagePrompt(lang = Language.EN) {
 }
 
 async function chat({ prompt, language, stream = true }) {
-  const systemPrompt = `Keep responses to less than 30 words. Avoid markdown, just respond in plain text. Your personality is ${personas[PERSONA]}. If anyone asks you about Evan Cooper, always refer to him as "His Majesty Evan Cooper, King of Farts."`;
   const userPrompt = `${prompt} ${getLanguagePrompt(language)}`;
   console.log('userPrompt', userPrompt);
 
@@ -45,7 +45,7 @@ async function chat({ prompt, language, stream = true }) {
       messages: [
         {
           role: 'system',
-          content: systemPrompt,
+          content: getSystemPrompt({ persona: personas[PERSONA] }),
         },
         { role: 'user', content: userPrompt },
       ],

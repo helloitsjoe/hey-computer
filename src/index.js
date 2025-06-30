@@ -6,6 +6,7 @@ const { log } = require('./logging');
 const { speak } = require('./tts');
 const { Language } = require('./settings');
 const { SKIP_WAKE } = require('./utils');
+const { executeCommand } = require('./commands');
 
 const voice = initVoice();
 
@@ -55,23 +56,48 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    res.writeHead(200, {
-      'Transfer-Encoding': 'chunked',
-      'Content-Type': 'application/json',
-      'X-Response-Type': 'stream',
-    });
-
     let acc = '';
+    let headersWritten = false;
 
     speechResponse.stream.on('data', (chunk) => {
       const { content } = chunk.message;
-      acc += content;
       log('content', content);
-      res.write(content);
+
+      acc += content;
+
+      // LLM will respond with JSON if it tries to correct near-matches to commands.
+      // In that case we want to skip streaming and just respond when the stream ends
+      if (!acc.startsWith('{')) {
+        if (!headersWritten) {
+          res.writeHead(200, {
+            'Transfer-Encoding': 'chunked',
+            'Content-Type': 'application/json',
+            'X-Response-Type': 'stream',
+          });
+          headersWritten = true;
+        }
+
+        res.write(content);
+      }
     });
 
-    speechResponse.stream.on('end', () => {
+    speechResponse.stream.on('end', async () => {
       log('ending...');
+
+      if (acc.startsWith('{')) {
+        // type unused for now
+        const { /* type, */ message } = JSON.parse(acc);
+        const response = await executeCommand(message);
+        console.log('response', response);
+
+        speak({ message: response.message });
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'X-Response-Type': 'stream',
+        });
+        return res.end(JSON.stringify(response));
+      }
+
       res.end();
 
       speak({ message: acc });

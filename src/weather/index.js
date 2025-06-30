@@ -15,7 +15,9 @@ function parseWeather(transcript) {
 }
 
 async function handleWeatherCommand({ period, location }) {
-  return `Weather for ${location || 'your location'} for ${period} is not yet implemented.`;
+  return {
+    message: `Weather for ${location || 'your location'} for ${period} is not yet implemented.`,
+  };
 }
 
 module.exports = { parseWeather, handleWeatherCommand, WEATHER_REGEX };

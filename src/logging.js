@@ -4,7 +4,7 @@ const { SAVE_DIR } = require('./utils');
 
 const DEFAULT_LOG_DIR = path.join(SAVE_DIR, 'logs');
 const DEFAULT_LOG_PREFIX = 'main';
-const DEFAULT_LOG_LEVEL = 'info';
+const DEFAULT_LOG_LEVEL = 'log';
 const MB_PER_FILE = 5;
 const MAX_FILES = 20;
 
@@ -46,7 +46,7 @@ function log(
 ) {
   const file = getFileFromPrefix(filePrefix);
   // Define log levels in order of severity
-  const levels = ['debug', 'info', 'warn', 'error'];
+  const levels = ['log', 'debug', 'info', 'warn', 'error'];
 
   if (!levels.includes(level)) {
     throw new Error('Invalid log level:', level);

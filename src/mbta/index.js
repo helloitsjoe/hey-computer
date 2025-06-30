@@ -1,7 +1,7 @@
 const MBTA = require('mbta-client');
 
 const MBTA_REGEX =
-  /^(when is|when's|how long until) (my|the) (next )?bus( coming| comes)?/i;
+  /^(when is|when's|how long until|wsns|once) (my|the) (next )?bus( coming| comes)?/i;
 
 const STOP = 2056;
 const PREDICTIONS_LIMIT = 4;
