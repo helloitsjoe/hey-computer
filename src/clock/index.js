@@ -14,15 +14,19 @@ const { SAVE_DIR } = require('../utils');
 //  - Cancel the alarm
 //  - "Set a timer" should ask how long
 
-const CLOCK_FILE = path.join(SAVE_DIR, 'clock.json');
+const DEFAULT_CLOCK_FILE = path.join(SAVE_DIR, 'clock.json');
+const STOP_REGEX = /^stop( stop)?( stop)?$/i;
 const CLOCK_REGEX =
-  /^(set|cancel|stop)\s*(?:a|an|my|the)?\s*(timer|alarm)(?: for)?(.*)?$/i;
+  /^(set|cancel|stop)\s*(?:a|an|my|the)?\s*(timer|alarm|time(?: or)?)(?: for)?(.*)?$/i;
 
+// Node setTimeout returns a non-serializable Timer object instead of ID
+const timerCancelMap = {};
 const clockEmitter = new EventEmitter();
 
 function loadTimers() {
   try {
-    return JSON.parse(fs.readFileSync(CLOCK_FILE, 'utf-8')).timers || {};
+    const saveFile = process.env.CLOCK_FILE || DEFAULT_CLOCK_FILE;
+    return JSON.parse(fs.readFileSync(saveFile, 'utf-8')).timers || {};
   } catch (err) {
     if (err.code === 'ENOENT') {
       return {};
@@ -34,10 +38,30 @@ function loadTimers() {
 }
 
 function saveTimers(timers) {
-  fs.writeFileSync(CLOCK_FILE, JSON.stringify({ timers }, null, 2));
+  const saveFile = process.env.CLOCK_FILE || DEFAULT_CLOCK_FILE;
+  fs.mkdirSync(path.dirname(saveFile), { recursive: true });
+  fs.writeFileSync(saveFile, JSON.stringify({ timers }, null, 2));
 }
 
+// function cancelAllTimers() {
+//   for (const [k, cancelable] of Object.entries(timerCancelMap)) {
+//     clearTimeout(cancelable);
+//     delete timerCancelMap[k];
+//   }
+// }
+
+const translateMap = {
+  time: 'timer',
+  'time or': 'timer',
+};
+
 function parseClock(transcript) {
+  // TODO: Eventually might have more things we want to stop, at that point
+  // pull this out of clock and have detect what needs stopping
+  if (transcript.match(STOP_REGEX)) {
+    return { type: 'timer', action: 'stop', time: null };
+  }
+
   const match = transcript.match(CLOCK_REGEX);
 
   if (!match) {
@@ -45,33 +69,12 @@ function parseClock(transcript) {
   }
 
   const action = match[1].toLowerCase(); // 'set', 'stop' or 'cancel'
-  const type = match[2].toLowerCase(); // 'timer' or 'alarm'
-  const time = match[3] ? match[3].trim() : null; // e.g. '5 minutes', '7 AM'
+  const typeRaw = match[2].toLowerCase(); // 'timer' or 'alarm'
+  const type = translateMap[typeRaw] || typeRaw;
+  const time = match[3] ? match[3].trim() : null; // e.g. 'five minutes'
 
   return { type, action, time };
 }
-
-// function getUnit(input) {
-//   switch (input) {
-//     case 'min':
-//     case 'mins':
-//     case 'minute':
-//     case 'minutes':
-//       return 'minutes';
-//     case 'hr':
-//     case 'hrs':
-//     case 'hour':
-//     case 'hours':
-//       return 'hours';
-//     case 'sec':
-//     case 'secs':
-//     case 'second':
-//     case 'seconds':
-//       return 'seconds';
-//     default:
-//       throw new Error(`Unexpected unit: ${input}`);
-//   }
-// }
 
 function parseTimerString(timeString) {
   let parts = timeString.replaceAll(' and', '').split(' ');
@@ -196,17 +199,20 @@ async function handleClockCommand({ type, action, time }) {
 
       const triggerTimeStamp = Date.now() + totalSeconds * 1000;
 
+      // TODO: Move load/save into setTimer to simplify?
       // Load existing timers or create a new object
       const timers = loadTimers();
 
+      // setTimeout ID
+      const cancelable = setTimer({ name: time, triggerTimeStamp });
+
+      timerCancelMap[triggerTimeStamp] = cancelable;
       timers[triggerTimeStamp] = {
-        // TODO: Human friendly name
         id: triggerTimeStamp,
+        name: time,
         type: 'timer',
         triggerTimeStamp,
       };
-
-      setTimer({ triggerTimeStamp });
 
       // Save timer to disk
       saveTimers(timers);
@@ -231,12 +237,37 @@ async function handleClockCommand({ type, action, time }) {
       return {
         message: `${timeString} timer starting now.`,
         type: 'timer',
-        // TODO: name
         data: { triggerTimeStamp },
       };
     } else if (action === 'cancel') {
+      const savedTimers = loadTimers();
+      console.log('savedTimers', savedTimers);
+      console.log('timerCancelMap', timerCancelMap);
+      const timers = Object.values(savedTimers);
+
+      if (timers.length === 0) {
+        return { message: "You don't have any timers set" };
+      }
+
+      if (timers.length === 1) {
+        const onlyTimer = timers[0];
+        clearTimeout(timerCancelMap[onlyTimer.triggerTimeStamp]);
+        delete timerCancelMap[onlyTimer.triggerTimeStamp];
+        delete savedTimers[onlyTimer.id];
+
+        saveTimers(savedTimers);
+
+        return { message: `${onlyTimer.name} timer canceled` };
+      }
+
+      if (!time) {
+        return { message: 'Which timer should I cancel?' };
+      }
+
       // If only one timer, cancel, otherwise ask which one
-      return 'Timer cancelled.';
+      // TODO: Handle `time` in `cancel` flow, e.g. "Cancel my 30 minute timer"
+
+      return { message: 'Something went wrong with timers' };
     }
   } else if (type === 'alarm') {
     if (action === 'set') {
@@ -251,35 +282,41 @@ async function handleClockCommand({ type, action, time }) {
 }
 
 async function initSavedTimers() {
-  const timers = loadTimers();
-  const entries = Object.entries(timers);
+  // TODO: Write tests for this
+  const savedTimers = loadTimers();
+  const entries = Object.entries(savedTimers);
 
   for (let i = 0; i < entries.length; i++) {
     const [id, { name, triggerTimeStamp }] = entries[i];
 
     if (triggerTimeStamp < Date.now()) {
       console.log(`Timer ${id} past due, will be deleted`);
-      delete timers[id];
+      delete savedTimers[id];
     } else {
       const duration = triggerTimeStamp - Date.now();
       console.log(`Timer will go off in ${duration / 1000} sec`);
-      setTimer({ name, triggerTimeStamp });
+      const cancelable = setTimer({ name, triggerTimeStamp });
+      timerCancelMap[triggerTimeStamp] = cancelable;
     }
   }
 
-  saveTimers(timers);
+  saveTimers(savedTimers);
 }
 
 function setTimer({ name, triggerTimeStamp }) {
   const duration = triggerTimeStamp - Date.now();
 
-  return setTimeout(() => {
-    clockEmitter.emit('trigger-timer');
+  const cancelable = setTimeout(() => {
+    clockEmitter.emit('trigger-timer', { name });
+    delete timerCancelMap[cancelable];
   }, duration);
+
+  return cancelable;
 }
 
 module.exports = {
   CLOCK_REGEX,
+  STOP_REGEX,
   setTimer,
   parseClock,
   clockEmitter,

@@ -1,6 +1,11 @@
 const { ANYLIST_REGEX, preprocessAnylist, addToList } = require('./anylist');
 const { MBTA_REGEX, getNextBus } = require('./mbta');
-const { CLOCK_REGEX, parseClock, handleClockCommand } = require('./clock');
+const {
+  STOP_REGEX,
+  CLOCK_REGEX,
+  parseClock,
+  handleClockCommand,
+} = require('./clock');
 const {
   WEATHER_REGEX,
   parseWeather,
@@ -26,6 +31,7 @@ async function executeCommand(rawTranscript) {
     case MBTA_REGEX.test(transcript): {
       return getNextBus(transcript);
     }
+    case STOP_REGEX.test(transcript):
     case CLOCK_REGEX.test(transcript): {
       const { type, action, time } = parseClock(transcript);
       return await handleClockCommand({ type, action, time });

@@ -15,12 +15,19 @@ describe('parseClock', () => {
     ${'set a timer for half an hour'}           | ${{ type: 'timer', action: 'set', time: 'half an hour' }}
     ${'cancel timer'}                           | ${{ type: 'timer', action: 'cancel', time: null }}
     ${'cancel the timer'}                       | ${{ type: 'timer', action: 'cancel', time: null }}
+    ${'cancel the time or'}                     | ${{ type: 'timer', action: 'cancel', time: null }}
+    ${'cancel my time'}                         | ${{ type: 'timer', action: 'cancel', time: null }}
     ${'set an alarm for 7 AM'}                  | ${{ type: 'alarm', action: 'set', time: '7 AM' }}
     ${'set an alarm for 7:15'}                  | ${{ type: 'alarm', action: 'set', time: '7:15' }}
     ${'set an alarm for seven thirty'}          | ${{ type: 'alarm', action: 'set', time: 'seven thirty' }}
     ${'cancel my alarm'}                        | ${{ type: 'alarm', action: 'cancel', time: null }}
     ${'set a timer 10 minutes'}                 | ${{ type: 'timer', action: 'set', time: '10 minutes' }}
     ${'set timer 10 minutes'}                   | ${{ type: 'timer', action: 'set', time: '10 minutes' }}
+    ${'stop the timer'}                         | ${{ type: 'timer', action: 'stop', time: null }}
+    ${'stop the time'}                          | ${{ type: 'timer', action: 'stop', time: null }}
+    ${'stop the time or'}                       | ${{ type: 'timer', action: 'stop', time: null }}
+    ${'stop'}                                   | ${{ type: 'timer', action: 'stop', time: null }}
+    ${'stop stop'}                              | ${{ type: 'timer', action: 'stop', time: null }}
   `('$input', ({ input, expected }) => {
     expect(parseClock(input)).toEqual(expected);
   });
