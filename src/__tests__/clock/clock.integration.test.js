@@ -15,6 +15,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env = originalEnv;
+  // Clear all saved timers
   fs.rmdirSync(path.dirname(MOCK_CLOCK_FILE), { recursive: true, force: true });
   vi.useRealTimers();
 });
@@ -93,9 +94,77 @@ describe('clock integration tests', () => {
     expect(triggeredName).toBe('thirty seconds');
   });
 
-  // it('stops a triggered timer', () => {
-  //   //
-  // });
+  it.todo('stops a triggered timer');
+
+  describe('cancelling timers', () => {
+    it('cancels a single timer', async () => {
+      const triggerTime = Date.now() + 30 * 1000;
+      const setInput = { type: 'timer', action: 'set', time: 'thirty seconds' };
+      const setResponse = await handleClockCommand(setInput);
+      expect(setResponse.data.triggerTimeStamp / 1000).toBeCloseTo(
+        triggerTime / 1000,
+      );
+
+      let triggeredName = null;
+      clockEmitter.on('trigger-timer', ({ name }) => {
+        triggeredName = name;
+      });
+
+      const file = JSON.parse(fs.readFileSync(MOCK_CLOCK_FILE));
+      const values = Object.values(file.timers);
+      expect(values.length).toBe(1);
+
+      vi.advanceTimersByTime(15 * 1000);
+
+      const cancelInput = { type: 'timer', action: 'cancel', time: null };
+      const cancelResponse = await handleClockCommand(cancelInput);
+      expect(cancelResponse).toEqual({
+        message: 'thirty seconds timer canceled',
+      });
+
+      const fileAfterCancel = JSON.parse(fs.readFileSync(MOCK_CLOCK_FILE));
+      const valuesAfterCancel = Object.values(fileAfterCancel.timers);
+      expect(valuesAfterCancel.length).toBe(0);
+
+      // Should not have triggered after more than 30 seconds
+      vi.advanceTimersByTime(30 * 1000);
+      expect(triggeredName).toBeNull();
+    });
+
+    it('alerts when no timers are set', async () => {
+      fs.mkdirSync(path.dirname(MOCK_CLOCK_FILE), { recursive: true });
+
+      const cancelInput = { type: 'timer', action: 'cancel', time: null };
+      const cancelResponse = await handleClockCommand(cancelInput);
+      expect(cancelResponse).toEqual({
+        message: "You don't have any timers set",
+      });
+    });
+
+    it('responds when multiple timers are set', async () => {
+      const thirtyInput = {
+        type: 'timer',
+        action: 'set',
+        time: 'thirty seconds',
+      };
+      await handleClockCommand(thirtyInput);
+      const fortyInput = {
+        type: 'timer',
+        action: 'set',
+        time: 'forty seconds',
+      };
+      await handleClockCommand(fortyInput);
+
+      const cancelInput = { type: 'timer', action: 'cancel', time: null };
+      const cancelResponse = await handleClockCommand(cancelInput);
+      expect(cancelResponse).toEqual({
+        message: 'Which timer should I cancel?',
+      });
+    });
+
+    it.todo('cancels all timers');
+    it.todo('cancels one timer of multiple');
+  });
 
   describe('saved timers', () => {
     beforeEach(() => {
