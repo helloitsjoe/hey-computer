@@ -12,6 +12,7 @@ const {
   handleWeatherCommand,
 } = require('./weather');
 const { SETTINGS_REGEX, updateSettings } = require('./settings');
+const { DOG_REGEX, parseHappyDog, handleDog } = require('./happy-dog');
 
 async function executeCommand(rawTranscript) {
   const transcript = rawTranscript.trim();
@@ -30,6 +31,10 @@ async function executeCommand(rawTranscript) {
     }
     case MBTA_REGEX.test(transcript): {
       return getNextBus(transcript);
+    }
+    case DOG_REGEX.test(transcript): {
+      const { type } = parseHappyDog(transcript);
+      return await handleDog({ type });
     }
     case STOP_REGEX.test(transcript):
     case CLOCK_REGEX.test(transcript): {

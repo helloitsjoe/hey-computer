@@ -3,6 +3,7 @@ const { MBTA_REGEX } = require('../mbta');
 const { CLOCK_REGEX } = require('../clock');
 const { WEATHER_REGEX } = require('../weather');
 const { SETTINGS_REGEX } = require('../settings');
+const { DOG_REGEX } = require('../happy-dog');
 
 function getSystemPrompt({ persona }) {
   return `# General
@@ -25,6 +26,7 @@ Watch out for these regular expressions:
 - ${CLOCK_REGEX}
 - ${WEATHER_REGEX}
 - ${SETTINGS_REGEX}
+- ${DOG_REGEX}
 
 If the user request is CLOSE TO, BUT NOT AN EXACT MATCH with any of the following regular expressions, your response should ALWAYS follow two rules:
 1. Change the text to conform to the closest RegExp match
