@@ -76,7 +76,7 @@ function tokenizeText(text, language) {
 const deviceMatches = ['JBL', 'Built-in Audio Digital Stereo (HDMI)']; // 'Yeti' as backup
 
 async function speak({ message, skipSpeech }) {
-  if (globalSkipSpeech || skipSpeech) {
+  if (globalSkipSpeech || skipSpeech || !message) {
     return;
   }
   const modelFile = `orca_params_${Language.get()}_female.pv`;

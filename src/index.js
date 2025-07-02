@@ -36,14 +36,14 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    clockEmitter.on('trigger-timer', ({ name }) => {
+    clockEmitter.once('trigger-timer', ({ name }) => {
       console.log(`Timer finished at ${new Date().toISOString()}`);
       const message = `data: {"message":"TIMER","data":{"name":"${name}"}}\n\n`;
       console.log(`Sending ${message}`);
       res.write(message);
     });
 
-    clockEmitter.on('stop-timer', () => {
+    clockEmitter.once('stop-timer', () => {
       console.log(`Stopping timer`);
       res.write('data: {"message":"TIMER_OFF"}\n\n');
     });

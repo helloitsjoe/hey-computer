@@ -179,7 +179,7 @@ async function handleClockCommand({ type, action, time }) {
   if (type === 'timer') {
     if (action === 'stop') {
       clockEmitter.emit('stop-timer');
-      return;
+      return {};
     } else if (action === 'set') {
       if (!time) {
         return { message: "You didn't tell me how long!" };
@@ -308,7 +308,10 @@ function setTimer({ name, triggerTimeStamp }) {
 
   const cancelable = setTimeout(() => {
     clockEmitter.emit('trigger-timer', { name });
+    const savedTimers = loadTimers();
     delete timerCancelMap[cancelable];
+    delete savedTimers[triggerTimeStamp];
+    saveTimers(savedTimers);
   }, duration);
 
   return cancelable;

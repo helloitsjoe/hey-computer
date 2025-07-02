@@ -15,7 +15,9 @@ describe('parseClock', () => {
     ${"what's the weather forecast today"}           | ${{ period: 'today', location: '' }}
     ${"what's the weather forecast for tomorrow"}    | ${{ period: 'tomorrow', location: '' }}
     ${"what's the weather going to be today"}        | ${{ period: 'today', location: '' }}
+    ${"what's the weather gonna be today"}           | ${{ period: 'today', location: '' }}
     ${"what's the weather going to be tomorrow"}     | ${{ period: 'tomorrow', location: '' }}
+    ${"what's the weather going to be on saturday"}  | ${{ period: 'saturday', location: '' }}
     ${"what's the weather going to be this evening"} | ${{ period: 'tonight', location: '' }}
     ${"what's the weather going to be tonight"}      | ${{ period: 'tonight', location: '' }}
   `('$input', ({ input, expected }) => {

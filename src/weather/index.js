@@ -1,7 +1,13 @@
 const { sentenceCase } = require('../utils');
 
 const WEATHER_REGEX =
-  /^(?:what's|what is) the (?:weather |forecast |weather forecast )(?:for |going to be (?:on )?)?(today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this evening|this weekend|this week)(?: in )?(.*)/i;
+  /^(?:what's|what is) the (?:weather |forecast |weather forecast )(?:for |going to be |gonna be )?(?:on )?(today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this evening|this weekend|this week)(?: in )?(.*)/i;
+
+const Weather = {
+  DAILY: 'daily',
+  HOURLY: 'hourly',
+  GRIDPOINT: 'gridpoint',
+};
 
 function parseWeather(transcript) {
   const match = transcript.match(WEATHER_REGEX);
@@ -10,7 +16,7 @@ function parseWeather(transcript) {
     return {};
   }
 
-  let period = (match[1] || 'today').toLowerCase(); // 'today' or 'tomorrow' or 'this week'
+  let period = match[1].toLowerCase(); // 'today' or 'tomorrow' or 'this week'
   const location = match[2].toLowerCase();
 
   if (period === 'this evening') {
@@ -21,12 +27,12 @@ function parseWeather(transcript) {
   return { period, location };
 }
 
-function getWeatherUrl(type = 'daily') {
+function getWeatherUrl(type = Weather.DAILY) {
   const baseUrl = 'https://api.weather.gov/gridpoints/BOX/68,90';
   return {
-    daily: `${baseUrl}/forecast`,
-    hourly: `${baseUrl}/forecast/hourly`,
-    detail: baseUrl,
+    [Weather.DAILY]: `${baseUrl}/forecast`,
+    [Weather.HOURLY]: `${baseUrl}/forecast/hourly`,
+    [Weather.GRIDPOINT]: baseUrl,
   }[type];
 }
 
@@ -65,19 +71,19 @@ async function handleWeatherCommand({ period = 'today' } = {}) {
 
   let weather = null;
   try {
-    const res = await fetch(getWeatherUrl('detail'));
+    const res = await fetch(getWeatherUrl(Weather.DAILY));
     if (!res.ok) {
       throw new Error(res.statusText);
     }
     const weatherResponse = await res.json();
-    weather = weatherResponse?.properties.period;
-    console.log('weather', weatherResponse);
+    weather = weatherResponse?.properties?.periods;
+    console.log(' weather', weather);
     if (!weather) {
       throw new Error('Weather response was empty!', weatherResponse);
     }
   } catch (err) {
     console.error('Error fetching weather:', err);
-    return { message: 'There was an error fetching weather' };
+    return { message: `There was an error fetching weather: ${err.message}` };
   }
 
   const weatherToday = getWeatherForDay(weather, period);
@@ -86,10 +92,10 @@ async function handleWeatherCommand({ period = 'today' } = {}) {
     return { message: `I couldn't find weather for ${period}` };
   }
 
-  const { temperature, shortForecast } = weatherToday;
+  const { name, temperature, shortForecast } = weatherToday;
 
   return {
-    message: `${sentenceCase(period)} will be around ${temperature}, ${shortForecast}`,
+    message: `${name} will be around ${temperature}, ${shortForecast}`,
   };
 }
 

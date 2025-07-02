@@ -226,6 +226,8 @@ describe('clock integration tests', () => {
       expect(triggeredName).toBeNull();
       vi.advanceTimersByTime(1 * 1000);
       expect(triggeredName).toBe('forty five seconds');
+      const saved = JSON.parse(fs.readFileSync(MOCK_CLOCK_FILE));
+      expect(Object.keys(saved.timers).length).toBe(0);
     });
   });
 });
