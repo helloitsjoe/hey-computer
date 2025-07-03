@@ -6,8 +6,9 @@ const { getSystemPrompt } = require('./system-prompt');
 // const HOST = '192.168.59.110'; // MB Pro
 const HOST = '192.168.59.100'; // MB Air
 const MODEL = 'gemma3';
+const OLLAMA_HOST = `http://${HOST}:11434`;
 
-const ollama = new Ollama({ host: `http://${HOST}:11434` });
+const ollama = new Ollama({ host: OLLAMA_HOST });
 
 const personas = {
   normal: 'a helpful assistant.',
@@ -35,7 +36,22 @@ function getLanguagePrompt(lang = Language.EN) {
   return `Please respond only in ${requestedLanguage}. IMPORTANT: DO NOT include any English in your response.`;
 }
 
+async function isAvailable() {
+  try {
+    const res = await fetch(OLLAMA_HOST);
+    return res.ok;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
+
 async function chat({ prompt, language, stream = true }) {
+  const ok = await isAvailable();
+  if (!ok) {
+    console.log('Chat unavailable');
+    return { message: "I'm having trouble chatting right now." };
+  }
   const userPrompt = `${prompt} ${getLanguagePrompt(language)}`;
   console.log('userPrompt', userPrompt);
 
@@ -70,4 +86,4 @@ async function chat({ prompt, language, stream = true }) {
   return { stream: streamRes };
 }
 
-module.exports = { chat };
+module.exports = { chat, isAvailable };

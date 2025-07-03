@@ -42,8 +42,8 @@ async function executeCommand(rawTranscript) {
       return await handleClockCommand({ type, action, time });
     }
     case WEATHER_REGEX.test(transcript): {
-      const { period, location } = parseWeather(transcript);
-      return await handleWeatherCommand({ period, location });
+      const { type, period, location } = parseWeather(transcript);
+      return await handleWeatherCommand({ type, period, location });
     }
     default: {
       // `stream` response triggers client llm stream request

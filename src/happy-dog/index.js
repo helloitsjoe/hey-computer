@@ -1,5 +1,5 @@
 const DOG_REGEX =
-  /^i (just )?((fed|gave) (olive|all of)\s*(her )?(itch )?(food|medicine|meds|medication)?)$/i;
+  /^i (just )?((fed|gave|said) (olive|all of)\s*(her )?(itch )?(food|medicine|meds|medication)?)$/i;
 
 function parseHappyDog(transcript) {
   const match = transcript.match(DOG_REGEX);

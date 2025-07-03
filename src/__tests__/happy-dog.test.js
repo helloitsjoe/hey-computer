@@ -8,7 +8,10 @@ describe('parseDogApp', () => {
 
   it.each`
     input                            | expected
+    ${'i fed olive'}                 | ${{ type: 'feed' }}
+    ${'i said all of'}               | ${{ type: 'feed' }}
     ${'i just fed olive'}            | ${{ type: 'feed' }}
+    ${'i just said olive'}           | ${{ type: 'feed' }}
     ${'i just gave olive food'}      | ${{ type: 'feed' }}
     ${'i just gave olive her food'}  | ${{ type: 'feed' }}
     ${'i gave olive her food'}       | ${{ type: 'feed' }}
