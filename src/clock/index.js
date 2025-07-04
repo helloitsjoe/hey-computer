@@ -77,11 +77,15 @@ function parseClock(transcript) {
 }
 
 function parseTimerString(timeString) {
-  let parts = timeString.replaceAll(' and', '').split(' ');
+  let parts = timeString
+    .replaceAll(' and', '')
+    .replaceAll(/(hour|minute|second)(\s|$)/gi, '$1s$2')
+    .split(' ');
+
   const parsedWords = { hours: '', minutes: '', seconds: '' };
 
   for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
+    let part = parts[i];
     if (['hours', 'minutes', 'seconds'].includes(part)) {
       parsedWords[part] = parts.slice(0, i).join(' ');
       parts = parts.slice(i + 1);

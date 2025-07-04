@@ -36,9 +36,13 @@ describe('parseClock', () => {
 describe('parseTimerString', () => {
   it.each`
     input                                                              | expected
+    ${'1 second'}                                                      | ${{ hours: 0, minutes: 0, seconds: 1 }}
     ${'30 seconds'}                                                    | ${{ hours: 0, minutes: 0, seconds: 30 }}
+    ${'1 minute'}                                                      | ${{ hours: 0, minutes: 1, seconds: 0 }}
+    ${'one minute'}                                                    | ${{ hours: 0, minutes: 1, seconds: 0 }}
     ${'5 minutes'}                                                     | ${{ hours: 0, minutes: 5, seconds: 0 }}
     ${'5 minutes and 30 seconds'}                                      | ${{ hours: 0, minutes: 5, seconds: 30 }}
+    ${'1 hour and thirty minutes'}                                     | ${{ hours: 1, minutes: 30, seconds: 0 }}
     ${'3 hours and 5 minutes'}                                         | ${{ hours: 3, minutes: 5, seconds: 0 }}
     ${'3 hours 5 minutes 40 seconds'}                                  | ${{ hours: 3, minutes: 5, seconds: 40 }}
     ${'3 hours 5 minutes and 40 seconds'}                              | ${{ hours: 3, minutes: 5, seconds: 40 }}
