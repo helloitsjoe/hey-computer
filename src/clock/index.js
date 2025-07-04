@@ -17,7 +17,7 @@ const { SAVE_DIR } = require('../utils');
 const DEFAULT_CLOCK_FILE = path.join(SAVE_DIR, 'clock.json');
 const STOP_REGEX = /^stop( stop)?( stop)?$/i;
 const CLOCK_REGEX =
-  /^(set|cancel|stop)\s*(?:a|an|my|the)?\s*(timer|alarm|time(?: or)?)(?: for)?(.*)?$/i;
+  /^(set|cancel|stop)\s*(?:a|an|my|the)?\s*(timer|alarm|time(?: or| are)?)(?: for| called| named)?(.*)?$/i;
 
 // Node setTimeout returns a non-serializable Timer object instead of ID
 const timerCancelMap = {};
@@ -53,6 +53,7 @@ function saveTimers(timers) {
 const translateMap = {
   time: 'timer',
   'time or': 'timer',
+  'time are': 'timer',
 };
 
 function parseClock(transcript) {
@@ -253,25 +254,27 @@ async function handleClockCommand({ type, action, time }) {
         return { message: "You don't have any timers set" };
       }
 
-      if (timers.length === 1) {
-        const onlyTimer = timers[0];
-        clearTimeout(timerCancelMap[onlyTimer.triggerTimeStamp]);
-        delete timerCancelMap[onlyTimer.triggerTimeStamp];
-        delete savedTimers[onlyTimer.id];
-
-        saveTimers(savedTimers);
-
-        return { message: `${onlyTimer.name} timer canceled` };
-      }
-
-      if (!time) {
+      // If only one timer, cancel, otherwise ask which one
+      if (!time && timers.length > 1) {
         return { message: 'Which timer should I cancel?' };
       }
 
-      // If only one timer, cancel, otherwise ask which one
       // TODO: Handle `time` in `cancel` flow, e.g. "Cancel my 30 minute timer"
+      // TODO: I guess I should handle multiple timers with the same name :|
+      try {
+        const timer =
+          timers.length === 1 ? timers[0] : timers.find((t) => t.name === time);
+        clearTimeout(timerCancelMap[timer.triggerTimeStamp]);
+        delete timerCancelMap[timer.triggerTimeStamp];
+        delete savedTimers[timer.id];
 
-      return { message: 'Something went wrong with timers' };
+        saveTimers(savedTimers);
+
+        return { message: `${timer.name} timer canceled` };
+      } catch (err) {
+        console.error(err);
+        return { message: 'Something went wrong with timers' };
+      }
     }
   } else if (type === 'alarm') {
     if (action === 'set') {

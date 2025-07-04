@@ -162,8 +162,58 @@ describe('clock integration tests', () => {
       });
     });
 
+    it('cancels a single timer (by name) of multiple', async () => {
+      // First timer
+      const triggerTime = Date.now() + 30 * 1000;
+      const setInput = { type: 'timer', action: 'set', time: 'thirty seconds' };
+      const setResponse = await handleClockCommand(setInput);
+      expect(setResponse.data.triggerTimeStamp / 1000).toBeCloseTo(
+        triggerTime / 1000,
+      );
+
+      // Second timer
+      const triggerTimeTwo = Date.now() + 120 * 1000;
+      const setInputTwo = { type: 'timer', action: 'set', time: 'two minutes' };
+      const setResponseTwo = await handleClockCommand(setInputTwo);
+      expect(setResponseTwo.data.triggerTimeStamp / 1000).toBeCloseTo(
+        triggerTimeTwo / 1000,
+      );
+
+      let triggeredName = null;
+      clockEmitter.on('trigger-timer', ({ name }) => {
+        triggeredName = name;
+      });
+
+      const file = JSON.parse(fs.readFileSync(MOCK_CLOCK_FILE));
+      const values = Object.values(file.timers);
+      expect(values.length).toBe(2);
+
+      vi.advanceTimersByTime(15 * 1000);
+
+      const cancelInput = {
+        type: 'timer',
+        action: 'cancel',
+        time: 'thirty seconds',
+      };
+      const cancelResponse = await handleClockCommand(cancelInput);
+      expect(cancelResponse).toEqual({
+        message: 'thirty seconds timer canceled',
+      });
+
+      const fileAfterCancel = JSON.parse(fs.readFileSync(MOCK_CLOCK_FILE));
+      const valuesAfterCancel = Object.values(fileAfterCancel.timers);
+      expect(valuesAfterCancel.length).toBe(1);
+
+      // Should not have triggered after 31 seconds
+      vi.advanceTimersByTime(16 * 1000);
+      expect(triggeredName).toBeNull();
+
+      // Should have triggered after 2 minutes
+      vi.advanceTimersByTime(90 * 1000);
+      expect(triggeredName).toBe('two minutes');
+    });
+
     it.todo('cancels all timers');
-    it.todo('cancels one timer of multiple');
   });
 
   describe('saved timers', () => {

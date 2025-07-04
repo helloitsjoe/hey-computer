@@ -3,10 +3,8 @@ const { Readable } = require('node:stream');
 const { Language } = require('../settings');
 const { getSystemPrompt } = require('./system-prompt');
 
-// const HOST = '192.168.59.110'; // MB Pro
-const HOST = '192.168.59.100'; // MB Air
 const MODEL = 'gemma3';
-const OLLAMA_HOST = `http://${HOST}:11434`;
+const OLLAMA_HOST = `http://${process.env.HOST}:11434`;
 
 const ollama = new Ollama({ host: OLLAMA_HOST });
 
@@ -39,6 +37,7 @@ function getLanguagePrompt(lang = Language.EN) {
 async function isAvailable() {
   try {
     const res = await fetch(OLLAMA_HOST);
+    console.log('res', res);
     return res.ok;
   } catch (err) {
     console.error(err);
@@ -52,6 +51,7 @@ async function chat({ prompt, language, stream = true }) {
     console.log('Chat unavailable');
     return { message: "I'm having trouble chatting right now." };
   }
+  console.log('Chat is available');
   const userPrompt = `${prompt} ${getLanguagePrompt(language)}`;
   console.log('userPrompt', userPrompt);
 

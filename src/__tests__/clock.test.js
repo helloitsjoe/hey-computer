@@ -17,6 +17,10 @@ describe('parseClock', () => {
     ${'cancel the timer'}                       | ${{ type: 'timer', action: 'cancel', time: null }}
     ${'cancel the time or'}                     | ${{ type: 'timer', action: 'cancel', time: null }}
     ${'cancel my time'}                         | ${{ type: 'timer', action: 'cancel', time: null }}
+    ${'cancel my timer called 30 minutes'}      | ${{ type: 'timer', action: 'cancel', time: '30 minutes' }}
+    ${'cancel my time are called 30 minutes'}   | ${{ type: 'timer', action: 'cancel', time: '30 minutes' }}
+    ${'cancel my time are named 30 minutes'}    | ${{ type: 'timer', action: 'cancel', time: '30 minutes' }}
+    ${'cancel my timer for 30 minutes'}         | ${{ type: 'timer', action: 'cancel', time: '30 minutes' }}
     ${'set an alarm for 7 AM'}                  | ${{ type: 'alarm', action: 'set', time: '7 AM' }}
     ${'set an alarm for 7:15'}                  | ${{ type: 'alarm', action: 'set', time: '7:15' }}
     ${'set an alarm for seven thirty'}          | ${{ type: 'alarm', action: 'set', time: 'seven thirty' }}
