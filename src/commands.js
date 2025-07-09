@@ -14,6 +14,8 @@ const {
 const { SETTINGS_REGEX, updateSettings } = require('./settings');
 const { DOG_REGEX, parseHappyDog, handleDog } = require('./happy-dog');
 
+const NEVERMIND_REGEX = /never\s*mind/i;
+
 async function executeCommand(rawTranscript) {
   const transcript = rawTranscript.trim();
   if (!transcript || typeof transcript !== 'string') {
@@ -44,6 +46,9 @@ async function executeCommand(rawTranscript) {
     case WEATHER_REGEX.test(transcript): {
       const { type, period, location } = parseWeather(transcript);
       return await handleWeatherCommand({ type, period, location });
+    }
+    case NEVERMIND_REGEX.test(transcript): {
+      return {};
     }
     default: {
       // `stream` response triggers client llm stream request
