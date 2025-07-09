@@ -36,20 +36,24 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    clockEmitter.once('trigger-timer', ({ name }) => {
+    const triggerTimer = ({ name }) => {
       console.log(`Timer finished at ${new Date().toISOString()}`);
       const message = `data: {"message":"TIMER","data":{"name":"${name}"}}\n\n`;
       console.log(`Sending ${message}`);
       res.write(message);
-    });
+    };
 
-    clockEmitter.once('stop-timer', () => {
+    const stopTimer = () => {
       console.log(`Stopping timer`);
       res.write('data: {"message":"TIMER_OFF"}\n\n');
-    });
+    };
+
+    clockEmitter.on('trigger-timer', triggerTimer);
+    clockEmitter.once('stop-timer', stopTimer);
 
     req.on('close', () => {
       res.end();
+      clockEmitter.removeAllListeners();
     });
   } else if (req.url.startsWith('/llm')) {
     log('Streaming...');
