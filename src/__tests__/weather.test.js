@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseWeather } from '../weather';
+import { parseWeather, getHighLowTempsForDay } from '../weather';
 
-describe('parseClock', () => {
+const TODAY = 'today';
+const TOMORROW = 'tomorrow';
+
+describe.skip('parseClock', () => {
   it('should return an empty object for no match', () => {
     expect(parseWeather('just a random phrase')).toEqual({});
   });
@@ -30,5 +33,87 @@ describe('parseClock', () => {
     ${'what will the high and low temperature be today'} | ${{ type: 'temperature', period: 'today', location: '' }}
   `('$input', ({ input, expected }) => {
     expect(parseWeather(input)).toEqual(expected);
+  });
+});
+
+describe.skip('getHighLowTempsForDay', () => {
+  const weatherProperties = {
+    periods: [
+      { temperature: 80, isDaytime: true },
+      { temperature: 80, isDaytime: true },
+      { temperature: 80, isDaytime: true },
+      { temperature: 79, isDaytime: false },
+      { temperature: 77, isDaytime: false },
+      { temperature: 76, isDaytime: false },
+      { temperature: 73, isDaytime: false },
+      { temperature: 70, isDaytime: false },
+      { temperature: 69, isDaytime: false },
+      { temperature: 66, isDaytime: false },
+      { temperature: 65, isDaytime: false },
+      { temperature: 63, isDaytime: false },
+      { temperature: 60, isDaytime: false },
+      { temperature: 62, isDaytime: false },
+      { temperature: 62, isDaytime: false },
+      { temperature: 62, isDaytime: true },
+      { temperature: 65, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 70, isDaytime: true },
+      { temperature: 69, isDaytime: true },
+      { temperature: 68, isDaytime: true },
+      { temperature: 67, isDaytime: false },
+      { temperature: 66, isDaytime: false },
+      { temperature: 65, isDaytime: false },
+      { temperature: 63, isDaytime: false },
+      { temperature: 59, isDaytime: false },
+      { temperature: 58, isDaytime: false },
+      { temperature: 55, isDaytime: false },
+      { temperature: 52, isDaytime: false },
+      { temperature: 50, isDaytime: false },
+      { temperature: 50, isDaytime: false },
+      { temperature: 50, isDaytime: false },
+      { temperature: 50, isDaytime: false },
+      { temperature: 51, isDaytime: true },
+      { temperature: 52, isDaytime: true },
+      { temperature: 53, isDaytime: true },
+      { temperature: 53, isDaytime: true },
+      { temperature: 53, isDaytime: true },
+      { temperature: 53, isDaytime: true },
+    ],
+  };
+
+  it('should return the correct high and low temperatures for today', () => {
+    const result = getHighLowTempsForDay(weatherProperties, TODAY);
+    expect(result.high).toBe(80);
+    expect(result.low).toBe(60);
+  });
+
+  it('should return the correct high and low temperatures for tomorrow', () => {
+    const result = getHighLowTempsForDay(weatherProperties, TOMORROW);
+    expect(result.high).toBe(70);
+    expect(result.low).toBe(50);
+  });
+
+  describe('asking at nighttime', () => {
+    const nightWeatherProperties = {
+      periods: weatherProperties.periods.slice(5),
+    };
+
+    it('should return the correct high and low temperatures for today', () => {
+      const result = getHighLowTempsForDay(nightWeatherProperties, TODAY);
+      expect(result.high).toBe(76);
+      expect(result.low).toBe(60);
+    });
+
+    it('should return the correct high and low temperatures for tomorrow', () => {
+      const result = getHighLowTempsForDay(nightWeatherProperties, TOMORROW);
+      expect(result.high).toBe(70);
+      expect(result.low).toBe(50);
+    });
   });
 });

@@ -1,6 +1,6 @@
 const { handleWeatherCommand } = require('./index');
 
-handleWeatherCommand().then((res) => {
+handleWeatherCommand({ type: 'temperature' }).then((res) => {
   console.log('res', res);
 });
 

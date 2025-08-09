@@ -72,11 +72,39 @@ function getWeatherForDay(weatherProperties, day = 'Today') {
   return periods[guessIndex - 1];
 }
 
-function getHighLowTempsForToday(weatherProperties) {
-  // TODO: Support requests for any day this week with gridpoint maxTemperature/minTemperature
+function getHighLowTempsForDay(weatherProperties, day = 'today') {
+  // For now only support today/tomorrow for high/low temps
+  const dayIndex = ['today', 'tomorrow'].indexOf(day);
+
   let high = 0;
   let low = Infinity;
-  for (const { temperature } of weatherProperties.periods) {
+
+  // TODO: This logic isn't right. I should check for the first isDaytime instance after a non-daytime instance for tommorrow
+  const startIndex = dayIndex * 24;
+  const endIndex = startIndex + 24;
+
+  console.log(
+    ' weatherProperties.periods',
+    weatherProperties.periods
+      .slice(0, 100)
+      .map(({ temperature, isDaytime }) =>
+        console.log({ temperature, isDaytime }),
+      ),
+  );
+
+  const periods = weatherProperties.periods.slice(startIndex, endIndex);
+
+  let prevWasDaytime = true;
+
+  for (const { temperature, isDaytime } of periods) {
+    console.log('temperature, isDaytime', temperature, isDaytime);
+    // Continue until the next morning
+    if (isDaytime && !prevWasDaytime) {
+      break;
+    }
+
+    prevWasDaytime = isDaytime;
+
     if (temperature < low) {
       low = temperature;
     }
@@ -98,6 +126,7 @@ async function handleWeatherCommand({ type, period = 'today' } = {}) {
   let weatherProperties = null;
   console.log('type', type);
   const endpoint = isTempRequest(type) ? Weather.HOURLY : Weather.DAILY;
+  console.log('endpoint', endpoint);
 
   try {
     const res = await fetch(getWeatherUrl(endpoint));
@@ -108,7 +137,6 @@ async function handleWeatherCommand({ type, period = 'today' } = {}) {
 
     weatherProperties = weatherResponse?.properties;
 
-    console.log(' weather', weatherProperties);
     if (!weatherProperties) {
       throw new Error('Weather response was empty!', weatherResponse);
     }
@@ -118,7 +146,7 @@ async function handleWeatherCommand({ type, period = 'today' } = {}) {
   }
 
   if (isTempRequest(type)) {
-    const { high, low } = getHighLowTempsForToday(weatherProperties);
+    const { high, low } = getHighLowTempsForDay(weatherProperties, period);
     return {
       message: `${sentenceCase(period)} will have a high of ${high} and a low of ${low}`,
     };
@@ -137,4 +165,9 @@ async function handleWeatherCommand({ type, period = 'today' } = {}) {
   }
 }
 
-module.exports = { parseWeather, handleWeatherCommand, WEATHER_REGEX };
+module.exports = {
+  parseWeather,
+  handleWeatherCommand,
+  getHighLowTempsForDay,
+  WEATHER_REGEX,
+};
