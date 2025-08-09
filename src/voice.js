@@ -77,6 +77,10 @@ async function listenForSpeech({ recorder, cheetah }) {
       if (Date.now() - start >= LISTENING_TIMEOUT_MS) {
         const partialTranscript = transcript;
         transcript = '';
+        // Do I need to flush here?
+        cheetah.flush();
+        console.log('Going back to sleep...');
+        wakeEmitter.emit('sleep');
         return { message: `Timed out. Transcript: ${partialTranscript}` };
       }
 
